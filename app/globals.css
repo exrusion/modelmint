@@ -31,3 +31,18 @@ code,pre,textarea,.eyebrow,.announcement-label,.price-input strong,.credit-revea
 @media(max-width:900px){.model-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.demo-shell{grid-template-columns:1fr;min-height:0}.demo-prompt{border-right:0;border-bottom:1px solid #d6ddcd}.demo-prompt,.demo-response{padding:28px}.demo-prompt>strong{margin:24px 0}.demo-response>p{min-height:110px;margin:30px 0 20px}}
 @media(max-width:600px){.model-card-grid{grid-template-columns:1fr}.model-card{min-height:170px}.walkthrough-grid{grid-template-columns:1fr}.walkthrough-grid article,.walkthrough-grid article:nth-child(2n){border-right:0;border-bottom:1px solid #dfe4da}.walkthrough-grid article:last-child{border-bottom:0}.demo-prompt,.demo-response{padding:22px}.demo-prompt>strong{font-size:28px}.demo-response>p{font-size:21px;min-height:125px}.demo-route{align-items:flex-start}.demo-route small{text-align:right}.demo-credit{align-items:flex-start;flex-wrap:wrap}.demo-credit b{display:none}.buyer-row{align-items:flex-start}.buyer-identity small{white-space:normal}.compact-note{line-height:1.45}}
 @media(prefers-reduced-motion:reduce){.typing-cursor{animation:none}.model-card:hover{transform:none}}
+
+/* Routers side rails: replaces the marble pillars without changing the theme. */
+.marble-edge{top:46px;bottom:0;width:76px;background:none;mix-blend-mode:normal;opacity:1;overflow:hidden}
+.marble-edge.left{left:0}
+.marble-edge.right{right:0;transform:none}
+.marble-edge:before{content:'';position:absolute;top:6%;bottom:6%;width:1px;background:linear-gradient(180deg,transparent,#a8e82d5c 16%,#a8e82d2e 82%,transparent)}
+.marble-edge.left:before{left:28px}
+.marble-edge.right:before{right:28px}
+.marble-edge:after{content:'';position:absolute;top:18%;width:7px;height:7px;border:2px solid #93cf1f;border-radius:50%;background:#f7f7f2;box-shadow:0 0 0 7px #a8e82d16,0 190px 0 -2px #a8e82d,0 190px 0 5px #a8e82d16,0 410px 0 -1px #a8e82d,0 410px 0 6px #a8e82d16;animation:router-side-drift 7s ease-in-out infinite}
+.marble-edge.left:after{left:24px}
+.marble-edge.right:after{right:24px;animation-delay:-3.5s}
+@keyframes router-side-drift{50%{transform:translateY(46px)}}
+@media(max-width:1100px){.marble-edge{width:44px}.marble-edge.left:before{left:17px}.marble-edge.right:before{right:17px}.marble-edge.left:after{left:13px}.marble-edge.right:after{right:13px}}
+@media(max-width:780px){.marble-edge{display:none}}
+@media(prefers-reduced-motion:reduce){.marble-edge:after{animation:none}}
