@@ -1,6 +1,8 @@
-# ModelMint
+# Routers
 
 Next.js / TypeScript marketplace with an Express OpenAI-compatible gateway, PostgreSQL accounting and Redis enforcement. Payments use native SOL on Solana mainnet, or ETH on Ethereum (chain 1) and Robinhood (chain 4663). There is no Stripe integration.
+
+One Routers API key and the `https://routers.markets/v1` base URL work across every enabled model allowed for that key. OpenAI-compatible refers to the request format; customers select GPT, Claude, Gemini, Grok, DeepSeek, Qwen and other available families by changing the `model` ID.
 
 ## Configuration
 
@@ -18,7 +20,6 @@ Copy `.env.example` to a private environment file for local work. On Railway, co
 - `PAYMENT_TREASURY_ADDRESS`: public ETH receiving address; the app never needs its private key.
 - `ETHEREUM_RPC_URL`, `ROBINHOOD_RPC_URL`: server RPC endpoints on the exact requested mainnets.
 - `SOLANA_RPC_URL`, `SOLANA_TREASURY_ADDRESS`: Solana mainnet server RPC and public SOL receiving address. The app never needs a wallet private key.
-- `RESEND_API_KEY`, `MAIL_FROM`: transactional email verification for the one-per-email signup reward.
 
 Brand configuration is in `brand.json`. The public domain defaults to the current app origin; generated keys use the configured prefix.
 
@@ -40,9 +41,8 @@ The single Railway web service hosts frontend and backend together. PostgreSQL a
 4. Test the provider; inspect its returned catalogue. Map each public model to an exact upstream model ID.
 5. Set each model's input, cached, output and reasoning prices in **usage-credit dollars per million tokens**; verify ratio, capabilities and context/output limits before enabling.
 6. Set physical inventory, actual supplier cost in microdollars per weighted token, and base tokens per usage-credit dollar. Initial physical inventory is zero. No balances or transactions are fabricated.
-7. Configure promotion economics, eligibility and allowed low-cost models. Premium excluded families remain blocked for promotional usage.
-8. Run real-provider compatibility checks and a user-approved payment before opening purchases.
-9. Complete operator contact/jurisdiction policy details. The included policies are launch drafts.
+7. Run real-provider compatibility checks and a user-approved payment before opening purchases.
+8. Complete operator contact and jurisdiction policy details.
 
 The $5/$10, $10/$20, $25/$50 and $50/$100 packages are offered as usage credit. Effective discounts depend on verified model rates. Do not advertise a guaranteed discount for an unverified model.
 
@@ -93,7 +93,7 @@ The pre-deploy runner executes isolated database/Redis integration checks, provi
 
 ### Verified on Railway
 
-Deployment `41b26eb8-4bf3-4137-a4a5-9426574bffc6` passed the production build, health check, and all isolated integration checks, including SSE CRLF delimiters split between network chunks. Provider authentication discovered 78 model IDs. Claude Haiku returned a real response and usage; GPT-5.4 Mini returned HTTP 503 on all four attempted capabilities. Deployment `361957b9-fd7c-46d3-99fa-6f3a6f0d989f` then passed real GPT-5.6 Sol non-streaming, streaming, forced tool calling, JSON output, usage reporting, and a second Claude Haiku request. These checks do not establish availability or pricing of other catalogue models. Customer gateway accounting was verified separately using isolated fixtures; live customer purchase and signup flows remain unverified.
+Deployment `41b26eb8-4bf3-4137-a4a5-9426574bffc6` passed the production build, health check, and all isolated integration checks, including SSE CRLF delimiters split between network chunks. Provider authentication discovered 78 model IDs. Claude Haiku returned a real response and usage; GPT-5.4 Mini returned HTTP 503 on all four attempted capabilities. Deployment `361957b9-fd7c-46d3-99fa-6f3a6f0d989f` then passed real GPT-5.6 Sol non-streaming, streaming, forced tool calling, JSON output, usage reporting, and a second Claude Haiku request. These checks do not establish availability or pricing of other catalogue models. Customer gateway accounting was verified separately using isolated fixtures; the live customer purchase, API-key and model-request flow has since been verified with a paid Solana checkout.
 
 X OAuth2 setup was saved with user confirmation, read-only permissions and the production callback URL. Credentials are server environment variables. Wallet checkout still requires a public treasury address and production RPC configuration. Physical inventory and model prices must reflect verified supplier/account data before purchases are opened.
 
@@ -115,4 +115,4 @@ Prompt: Use case: stylized-concept. Asset for the outer edge of an AI credits we
 
 ## Owner-authorized double-credit launch
 
-The owner authorized $10 payments to issue $20 purchased credit for all models, without requiring supplier purchase-cost disclosure. The launch rate is $1 usage credit per million weighted base tokens; model input and output rates equal their base-token multiplier in credit dollars per million actual tokens. This is ModelMint pricing, not a verified comparison against vendor list prices. The launch migration records the user's rounded 1,049M supplier balance conservatively as 1,048M available inventory and never resets it on redeploy. It probes every mapped chat model and enables successful responses with valid usage. Failed suppliers stay unavailable; customer paid credit has no premium-family restriction. Supplier profit cannot be inferred while acquisition cost is undisclosed.
+The owner authorized $10 payments to issue $20 purchased credit for all models, without requiring supplier purchase-cost disclosure. The launch rate is $1 usage credit per million weighted base tokens; model input and output rates equal their base-token multiplier in credit dollars per million actual tokens. This is Routers pricing, not a verified comparison against vendor list prices. The launch migration records the user's rounded 1,049M supplier balance conservatively as 1,048M available inventory and never resets it on redeploy. It probes every mapped chat model and enables successful responses with valid usage. Failed suppliers stay unavailable; customer paid credit has no premium-family restriction. Supplier profit cannot be inferred while acquisition cost is undisclosed.
