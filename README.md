@@ -1,6 +1,6 @@
 # ModelMint
 
-Next.js / TypeScript marketplace with an Express OpenAI-compatible gateway, PostgreSQL accounting and Redis enforcement. Payments use native ETH on Ethereum (chain 1) or Robinhood (chain 4663). There is no Stripe integration.
+Next.js / TypeScript marketplace with an Express OpenAI-compatible gateway, PostgreSQL accounting and Redis enforcement. Payments use native SOL on Solana mainnet, or ETH on Ethereum (chain 1) and Robinhood (chain 4663). There is no Stripe integration.
 
 ## Configuration
 
@@ -17,6 +17,7 @@ Copy `.env.example` to a private environment file for local work. On Railway, co
 - `ADMIN_X_IDS`: comma-separated numeric X account IDs for administrators.
 - `PAYMENT_TREASURY_ADDRESS`: public ETH receiving address; the app never needs its private key.
 - `ETHEREUM_RPC_URL`, `ROBINHOOD_RPC_URL`: server RPC endpoints on the exact requested mainnets.
+- `SOLANA_RPC_URL`, `SOLANA_TREASURY_ADDRESS`: Solana mainnet server RPC and public SOL receiving address. The app never needs a wallet private key.
 - `RESEND_API_KEY`, `MAIL_FROM`: transactional email verification for the one-per-email signup reward.
 
 Brand configuration is in `brand.json`. The public domain defaults to the current app origin; generated keys use the configured prefix.
@@ -94,11 +95,17 @@ The pre-deploy runner executes isolated database/Redis integration checks, provi
 
 Deployment `41b26eb8-4bf3-4137-a4a5-9426574bffc6` passed the production build, health check, and all isolated integration checks, including SSE CRLF delimiters split between network chunks. Provider authentication discovered 78 model IDs. Claude Haiku returned a real response and usage; GPT-5.4 Mini returned HTTP 503 on all four attempted capabilities. Deployment `361957b9-fd7c-46d3-99fa-6f3a6f0d989f` then passed real GPT-5.6 Sol non-streaming, streaming, forced tool calling, JSON output, usage reporting, and a second Claude Haiku request. These checks do not establish availability or pricing of other catalogue models. Customer gateway accounting was verified separately using isolated fixtures; live customer purchase and signup flows remain unverified.
 
-X OAuth setup is prepared, with read-only permissions and the production callback URL. Saving the new OAuth2 credentials requires confirmation. Wallet checkout still requires a public treasury address and production RPC configuration. Physical inventory and model prices must reflect verified supplier/account data before purchases are opened.
+X OAuth2 setup was saved with user confirmation, read-only permissions and the production callback URL. Credentials are server environment variables. Wallet checkout still requires a public treasury address and production RPC configuration. Physical inventory and model prices must reflect verified supplier/account data before purchases are opened.
 
 ### Reference UI update
 
 The landing page has a compact credit calculator, bold lime-highlighted headline, announcement bar, three trust cards, and original marble framing. Desktop browser review and calculator interaction passed. Mobile browser interaction remains unverified.
+
+### Solana payments
+
+Solana wallets sign a single-use ownership challenge. Each server-generated transaction transfers the quoted lamports and includes the invoice ID as a memo. Credit issuance requires a successful finalized mainnet transaction with the exact signer, recipient, amount and invoice memo, within the quote window. Signatures retain case and the database enforces one claim per network/signature. Unit fixtures verify failures and signature binding; a real wallet purchase remains untested until the receiving address and inventory are configured. Phantom-compatible browser providers are supported; mobile users can use the wallet’s in-app browser.
+
+Sources: https://solana.com/docs/rpc/http/gettransaction and https://docs.phantom.com/solana/sending-a-transaction
 
 ### Artwork
 
