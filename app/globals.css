@@ -188,3 +188,18 @@ body:has(.reference-home){--bg:#f6f8fc;--ink:#101828;--accent:#3157f6;background
 .step-number{color:#64759c}
 .walkthrough article a{border-color:#c5cfdd}
 .walkthrough article a span{color:#3157f6}
+
+/* Replace the borrowed marble pillars with a lightweight Routers signal rail. */
+.marble-edge{top:46px;bottom:0;width:76px;background:none;mix-blend-mode:normal;opacity:1;overflow:hidden}
+.marble-edge.left{left:0}
+.marble-edge.right{right:0;transform:none}
+.marble-edge:before{content:'';position:absolute;top:6%;bottom:6%;width:1px;background:linear-gradient(180deg,transparent,#3157f64d 16%,#3157f629 82%,transparent)}
+.marble-edge.left:before{left:28px}
+.marble-edge.right:before{right:28px}
+.marble-edge:after{content:'';position:absolute;top:18%;width:7px;height:7px;border:2px solid #3157f6;border-radius:50%;background:#f6f8fc;box-shadow:0 0 0 7px #3157f610,0 190px 0 -2px #3157f6,0 190px 0 5px #3157f610,0 410px 0 -1px #3157f6,0 410px 0 6px #3157f610;animation:signal-drift 7s ease-in-out infinite}
+.marble-edge.left:after{left:24px}
+.marble-edge.right:after{right:24px;animation-delay:-3.5s}
+@keyframes signal-drift{50%{transform:translateY(46px)}}
+@media(max-width:1100px){.marble-edge{width:44px}.marble-edge.left:before{left:17px}.marble-edge.right:before{right:17px}.marble-edge.left:after{left:13px}.marble-edge.right:after{right:13px}}
+@media(max-width:780px){.marble-edge{display:none}}
+@media(prefers-reduced-motion:reduce){.marble-edge:after{animation:none}}
