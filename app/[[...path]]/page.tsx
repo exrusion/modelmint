@@ -2,13 +2,14 @@
 import {useEffect,useState} from 'react';
 import {usePathname} from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import brand from '../../brand.json';
 type Data=Record<string,any>;
 const fmt=(v:any)=>Number(v||0).toLocaleString('en-US',{maximumFractionDigits:0});
 const compact=(v:any)=>Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(Number(v||0));
 const dollars=(v:any)=>'$'+(Number(v||0)/1e6).toFixed(2);
 async function call(path:string,body?:Data){const r=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const data=await r.json();if(!r.ok)throw new Error(data.error?.message||'Something went wrong. Please try again.');return data;}
-function Logo(){return <Link className="logo" href="/"><span className="logomark">{brand.logo}</span>{brand.name}</Link>}
+function Logo(){return <Link className="logo" href="/"><span className="logo-image"><Image src="/routers-logo.webp" alt="" width={52} height={52}/></span>{brand.name}</Link>}
 function Tag({children}:{children:React.ReactNode}){return <span className="tag">{children}</span>}
 function Empty({title,text}:{title:string,text:string}){return <div className="empty"><span className="empty-symbol">↗</span><h3>{title}</h3><p>{text}</p></div>}
 function Copy({value}:{value:string}){const [copied,setCopied]=useState(false);return <button className="copy" onClick={async()=>{try{await navigator.clipboard.writeText(value);setCopied(true);setTimeout(()=>setCopied(false),1800)}catch{setCopied(false)}}}>{copied?'Copied ✓':'Copy ↗'}</button>}
