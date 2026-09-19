@@ -8,6 +8,7 @@ await root.query('CREATE SCHEMA '+schema);
 const url=new URL(process.env.DATABASE_URL);url.searchParams.set('options','-c search_path='+schema);process.env.DATABASE_URL=url.toString();process.env.ENCRYPTION_KEY=randomBytes(32).toString('base64');
 const {q,initialize,pool,hash,encrypt}=await import('../server/db.mjs');
 const {reserve,settle,backedCredit}=await import('../server/accounting.mjs');
+const {reward}=await import('../server/auth.mjs');
 const {rateLimit,concurrency,redis}=await import('../server/redis.mjs');
 let server,upstream;
 try{
@@ -16,6 +17,11 @@ const uid=randomUUID(),kid=randomUUID();
 await q("UPDATE settings SET data=data || '{\"inventory\":10000000,\"baseTokensPerDollar\":100000,\"inventoryCostMicro\":0.001}'::jsonb");
 await q("INSERT INTO users(id,x_id,username,purchased_micro,base_tokens) VALUES($1,$2,'integration-fixture',15,15)",[uid,uid]);
 await q("INSERT INTO api_keys(id,user_id,name,hash,prefix) VALUES($1,$2,'test',$3,'test')",[kid,uid,hash('test-key')]);
+const sharedIp=hash('shared-network'),sharedDevice=hash('shared-browser'),rewardUsers=[randomUUID(),randomUUID()];
+for(const [index,rewardUser] of rewardUsers.entries())await q("INSERT INTO users(id,x_id,username,created_at,x_created_at,ip_hash,device_hash) VALUES($1,$2,$3,now()-interval '1 day',now()-interval '30 days',$4,$5)",[rewardUser,'reward-x-'+index,'reward-user-'+index,sharedIp,sharedDevice]);
+assert.equal(await reward(rewardUsers[0]),true);assert.equal(await reward(rewardUsers[1]),true,'a distinct X account may claim from a shared browser and network');assert.equal(await reward(rewardUsers[0]),false,'the same X account cannot claim twice');
+for(const rewardUser of rewardUsers){const rewarded=(await q('SELECT promo_tokens,promo_micro FROM users WHERE id=$1',[rewardUser])).rows[0];assert.equal(rewarded.promo_tokens,'1000000');assert.equal(rewarded.promo_micro,'1000000');}
+console.log('PASS one signup reward per X identity, including shared devices and delayed repair');
 await q("UPDATE models SET enabled=true,verified=true,input_rate=1,output_rate=1,cached_rate=1,reasoning_rate=1,ratio=1 WHERE id='gpt-5.4-mini'");
 const m=(await q("SELECT * FROM models WHERE id='gpt-5.4-mini'")).rows[0];
 const ids=[randomUUID(),randomUUID()];const simultaneous=await Promise.allSettled(ids.map(r=>reserve(uid,kid,m,r,10n,10n)));

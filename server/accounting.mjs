@@ -1,6 +1,7 @@
 import {q,tx,fail} from './db.mjs';
 export function integer(v){if(!Number.isSafeInteger(Number(v))||Number(v)<0)fail(400,'invalid_number','Expected a nonnegative safe integer.');return BigInt(v);}
 export function ceilProduct(n,rate){const [whole,frac='']=String(rate).split('.');if(!/^\d+$/.test(whole)||!/^[0-9]*$/.test(frac))fail(503,'invalid_price','Model pricing is not configured.');const scale=10n**BigInt(frac.length),r=BigInt(whole+frac);return (BigInt(n)*r+scale-1n)/scale;}
+export function promoEligible(m){return !!m.promo&&!/opus|astra|fable|kimi/i.test(m.id+' '+m.name);}
 export function usageCost(usage,m){const input=integer(usage.prompt_tokens),output=integer(usage.completion_tokens),cached=integer(usage.prompt_tokens_details?.cached_tokens||0),reasoning=integer(usage.completion_tokens_details?.reasoning_tokens||0);if(cached>input||reasoning>output)fail(502,'invalid_usage','Upstream token details are inconsistent.');return {input:input-cached,cached,reasoning,output:output-reasoning,actual:input+output,weighted:ceilProduct(input+output,m.ratio),micro:ceilProduct(input-cached,m.input_rate)+ceilProduct(cached,m.cached_rate)+ceilProduct(output-reasoning,m.output_rate)+ceilProduct(reasoning,m.reasoning_rate)};}
 export async function ledger(c,user,kind,delta,reference,metadata={}){await c.query('INSERT INTO ledgers(user_id,kind,delta,reference,metadata) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING',[user,kind,String(delta),reference,metadata]);}
 export async function reserve(userId,keyId,m,requestId,maxMicro,maxWeighted){return tx(async c=>{
@@ -26,7 +27,7 @@ if(u.monthly_limit_micro&&BigInt(month.micro)+maxMicro>BigInt(u.monthly_limit_mi
 for(const [cap,spent,cost] of [[k.spending_cap,k.spent_micro,maxMicro],[k.token_cap,k.spent_tokens,maxWeighted],[k.daily_cap,kd.micro,maxMicro],[k.monthly_cap,km.micro,maxMicro]])if(cap!==null&&BigInt(spent)+cost>BigInt(cap))fail(402,'key_limit_exceeded','An API-key spending or token limit would be exceeded.');
 const held=(await c.query("SELECT COALESCE(sum(max_weighted),0) n FROM reservations WHERE state IN ('reserved','review')")).rows[0];
 if(BigInt(settings.inventory)<BigInt(held.n)+maxWeighted)fail(503,'inventory_exhausted','Provider inventory is insufficient for this request.');
-const promoAllowed=m.promo&&!/opus|astra|fable|kimi/i.test(m.id+' '+m.name)&&u.promo_expires&&new Date(u.promo_expires)>new Date();
+const promoAllowed=promoEligible(m)&&u.promo_expires&&new Date(u.promo_expires)>new Date();
 const pm=promoAllowed?(BigInt(u.promo_micro)<maxMicro?BigInt(u.promo_micro):maxMicro):0n;
 const pt=promoAllowed?(BigInt(u.promo_tokens)<maxWeighted?BigInt(u.promo_tokens):maxWeighted):0n;
 const bm=maxMicro-pm,bt=maxWeighted-pt;
