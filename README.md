@@ -86,15 +86,19 @@ Live X login, real upstream usage/capabilities, real wallet receipt verification
 
 ## Current deployment delivery
 
-The initial Railway preview uses the official `node:22-bookworm-slim` image and a SHA-256 checked source archive split across `MINT_SOURCE_*` variables because GitHub browser controls timed out. The start command reconstructs the source, runs the isolated integration suite and builds the app. Move to the included Dockerfile and GitHub autodeploy after repository creation. The source archive contains no application credentials.
+GitHub `exrusion/modelmint`, branch `main`, now drives Railway deployments through the included Dockerfile. The web service runs `npm start`; its pre-deploy command is `node server/predeploy.mjs`. The old `MINT_SOURCE_*` variables are no longer used.
+
+The pre-deploy runner executes isolated database/Redis integration checks, provider authentication, and bounded synthetic live-provider checks. Live checks are recorded once per diagnostic version in the audit table; only usage and verification metadata are retained. They never enable models, mint balances, or change physical inventory.
 
 ### Verified on Railway
 
-Deployment `ef992eff-8fab-4e76-a33d-c93505785de7` reached SUCCESS. Its logs confirm all isolated integration checks passed against the deployed PostgreSQL and Redis services, followed by a successful Next.js production build. This does not verify external credentials or real model responses.
+Deployment `41b26eb8-4bf3-4137-a4a5-9426574bffc6` passed the production build, health check, and all isolated integration checks, including SSE CRLF delimiters split between network chunks. Provider authentication discovered 78 model IDs. Claude Haiku returned a real response and usage; GPT-5.4 Mini returned HTTP 503 on all four attempted capabilities. Deployment `361957b9-fd7c-46d3-99fa-6f3a6f0d989f` then passed real GPT-5.6 Sol non-streaming, streaming, forced tool calling, JSON output, usage reporting, and a second Claude Haiku request. These checks do not establish availability or pricing of other catalogue models. Customer gateway accounting was verified separately using isolated fixtures; live customer purchase and signup flows remain unverified.
+
+X OAuth setup is prepared, with read-only permissions and the production callback URL. Saving the new OAuth2 credentials requires confirmation. Wallet checkout still requires a public treasury address and production RPC configuration. Physical inventory and model prices must reflect verified supplier/account data before purchases are opened.
 
 ### Reference UI update
 
-The landing page now has a compact credit calculator, bold lime-highlighted headline, announcement bar, three trust cards, and original marble framing. Build and TypeScript checks passed. Deployment `213a7dba-13de-41b5-a14b-98616c15698c` reached SUCCESS; its provider check authenticated with RelayModels and discovered 78 model IDs. Model inference and pricing have not been verified. X setup remains pending because cloud browser controls timed out. Source repository: https://github.com/exrusion/modelmint.
+The landing page has a compact credit calculator, bold lime-highlighted headline, announcement bar, three trust cards, and original marble framing. Desktop browser review and calculator interaction passed. Mobile browser interaction remains unverified.
 
 ### Artwork
 
