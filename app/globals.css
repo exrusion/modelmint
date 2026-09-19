@@ -56,3 +56,12 @@ code,pre,textarea,.eyebrow,.announcement-label,.price-input strong,.credit-revea
   .home-header .nav{gap:20px;font-size:13px}
   .home-header .button.small{padding:8px 12px;font-size:12px}
 }
+
+.signup-reward{display:flex;align-items:center;gap:11px;width:max-content;max-width:100%;margin-top:18px;padding:9px 11px;border:1px solid #d7e5c0;border-radius:10px;background:#eef8df;color:#33491f;transition:transform .18s,border-color .18s}
+.signup-reward:hover{transform:translateY(-1px);border-color:#b9d78d}
+.signup-reward-icon{width:28px;height:28px;display:grid;place-items:center;flex:0 0 auto;border-radius:7px;background:#171913;color:#c1ff34;font-size:14px}
+.signup-reward>span:nth-child(2){display:flex;flex-direction:column;line-height:1.2}
+.signup-reward small{font-size:8px;letter-spacing:1px;color:#768769}
+.signup-reward strong{font-size:12px;font-weight:600}
+.signup-reward>b{margin-left:5px;font-size:10px;font-weight:600;white-space:nowrap}
+@media(max-width:480px){.signup-reward{width:100%}.signup-reward>b{margin-left:auto}}
