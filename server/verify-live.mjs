@@ -1,7 +1,7 @@
 import {initialize,q,pool} from './db.mjs';
 import {createHash} from 'node:crypto';
 // Explicit operator diagnostic. Sends small synthetic prompts only, stores billing metadata only.
-const run='provider.live-check.v1';
+const run='provider.live-check.v2';
 try {
  await initialize();
  if(!process.env.UPSTREAM_API_KEY) throw new Error('key_missing');
@@ -27,7 +27,7 @@ try {
    ok=ok&&Number.isSafeInteger(usage?.prompt_tokens)&&Number.isSafeInteger(usage?.completion_tokens);
    checks.push({label,model:body.model,ok,usage});
   }
-  const model='gpt-5.4-mini',common={model,max_tokens:512,messages:[{role:'user',content:'Reply with the single word OK.'}]};
+  const model='gpt-5.6-sol',common={model,max_tokens:512,messages:[{role:'user',content:'Reply with the single word OK.'}]};
   await check('nonstream',common);
   await check('model-switch',{...common,model:'claude-haiku-4-5'});
   await check('stream',{...common,stream:true,stream_options:{include_usage:true}});
