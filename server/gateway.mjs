@@ -1,0 +1,35 @@
+import {q,fail,hash,decrypt,id} from './db.mjs';
+import {rateLimit,concurrency,redis} from './redis.mjs';
+import {reserve,settle,ceilProduct,zeroUsage} from './accounting.mjs';
+export async function apiKey(req){const token=req.headers.authorization?.replace(/^Bearer /,'');if(!token)fail(401,'invalid_api_key','Provide a bearer API key.');const k=(await q('SELECT k.*,u.suspended FROM api_keys k JOIN users u ON u.id=k.user_id WHERE hash=$1',[hash(token)])).rows[0];if(!k||k.revoked||k.suspended||(k.expires&&new Date(k.expires)<new Date()))fail(401,'invalid_api_key','Invalid or revoked API key.');await rateLimit(k.id,k.rpm);return k;}
+export function mountGateway(app){
+app.get('/v1/models',async(req,res)=>{const k=await apiKey(req);const models=(await q('SELECT id FROM models WHERE enabled AND verified')).rows.filter(m=>!k.allowed_models.length||k.allowed_models.includes(m.id));res.json({object:'list',data:models.map(m=>({id:m.id,object:'model',created:0,owned_by:'modelmint'}))});});
+app.post('/v1/chat/completions',async(req,res)=>{
+const key=await apiKey(req),b=req.body;if(typeof b.model!=='string'||!Array.isArray(b.messages)||!b.messages.length)fail(400,'invalid_request_error','model and messages are required.');
+const model=(await q('SELECT * FROM models WHERE (id=$1 OR $1=ANY(aliases)) AND enabled AND verified',[b.model])).rows[0];if(!model)fail(404,'model_not_found','This model is not enabled or verified.');
+if(b.n&&b.n!==1)fail(400,'unsupported_parameter','Only n=1 is supported.');
+if(b.tools&&!model.tools)fail(400,'unsupported_parameter','Tool calling is not verified for this model.');if(b.response_format&&!model.json_format)fail(400,'unsupported_parameter','JSON formats are not verified for this model.');
+const media=b.messages.some(m=>Array.isArray(m.content)&&m.content.some(p=>p.type!=='text'));
+if(media&&!model.vision)fail(400,'unsupported_parameter','Vision is not verified for this model.');
+const max=Number(b.max_completion_tokens??b.max_tokens??Math.min(1024,model.max_output));if(!Number.isSafeInteger(max)||max<1||max>model.max_output)fail(400,'invalid_request_error','Invalid maximum output token count.');
+const serialized=JSON.stringify({messages:b.messages,tools:b.tools,response_format:b.response_format});const input=media?model.max_context-max:Buffer.byteLength(serialized)+b.messages.length*128+1024;
+if(input+max>model.max_context)fail(400,'context_length_exceeded','Request exceeds the conservative context budget.');
+const requestId=req.requestId||id(),release=await concurrency(key.user_id,requestId,model.premium?2:10);let reserved=false,started=false,sent=false,providerId=null,usage=null;const start=Date.now();const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),120000);res.on('close',()=>{if(!res.writableEnded)controller.abort();});
+try{
+const maxMicro=ceilProduct(input,Math.max(Number(model.input_rate),Number(model.cached_rate)))+ceilProduct(max,Math.max(Number(model.output_rate),Number(model.reasoning_rate)))+4n;
+const weighted=ceilProduct(input+max,model.ratio);await reserve(key.user_id,key.id,model,requestId,maxMicro,weighted);reserved=true;await redis('SET','reservation:'+requestId,String(weighted),'EX',600);
+const providers=(await q('SELECT * FROM providers WHERE enabled AND verified_at IS NOT NULL ORDER BY priority,id')).rows.filter(p=>!model.provider_ids.length||model.provider_ids.includes(p.id));if(!providers.length)fail(503,'provider_unavailable','No verified upstream provider is configured.');
+const body={};for(const field of ['messages','temperature','top_p','stop','tools','tool_choice','parallel_tool_calls','response_format','seed','presence_penalty','frequency_penalty','logit_bias','logprobs','top_logprobs','reasoning_effort'])if(b[field]!==undefined)body[field]=b[field];body.model=model.upstream_id;body.stream=b.stream===true;body.max_completion_tokens=max;if(b.max_tokens!==undefined){delete body.max_completion_tokens;body.max_tokens=max;}if(body.stream)body.stream_options={include_usage:true};
+let response;
+for(const p of providers){providerId=p.id;sent=true;response=await fetch(p.base_url.replace(/\/$/,'')+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+decrypt(p.encrypted_key),'Content-Type':'application/json','X-Request-Id':requestId},body:JSON.stringify(body),signal:controller.signal});if(response.ok)break;if([401,403,404,429,503].includes(response.status)){sent=false;await response.body?.cancel();continue;}sent=false;fail(502,'upstream_error','The upstream rejected this request.');}
+if(!response?.ok){sent=false;fail(503,'provider_unavailable','All configured providers rejected the request.');}
+res.setHeader('X-Request-Id',requestId);
+if(!body.stream){const data=await response.json();if(data.error)fail(502,'upstream_error','The provider could not complete this request.');usage=data.usage||null;await settle(requestId,usage,{providerId,latency:Date.now()-start});res.json({...data,model:model.id});}
+else{
+res.status(200).set({'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});res.flushHeaders();started=true;
+let buffer='',bytes=0,done=false;const decoder=new TextDecoder();for await(const chunk of response.body){bytes+=chunk.length;if(bytes>32*1024*1024)throw new Error('Upstream response exceeds limit');buffer+=decoder.decode(chunk,{stream:true}).replace(/\r\n/g,'\n');let pos;while((pos=buffer.indexOf('\n\n'))>=0){const frame=buffer.slice(0,pos);buffer=buffer.slice(pos+2);const line=frame.split('\n').filter(l=>l.startsWith('data:')).map(l=>l.slice(5).trimStart()).join('\n');if(line==='[DONE]'){done=true;continue;}if(line){const data=JSON.parse(line);if(data.usage)usage=data.usage;if(data.error)throw new Error('Upstream streaming error');if(data.model)data.model=model.id;res.write('data: '+JSON.stringify(data)+'\n\n');}}}await settle(requestId,done?usage:null,{providerId,latency:Date.now()-start});if(!done||!usage)res.write('data: '+JSON.stringify({error:{message:'Usage reconciliation is pending.',type:'upstream_usage_missing',code:'upstream_usage_missing'}})+'\n\n');res.end('data: [DONE]\n\n');}
+}catch(e){if(reserved)await settle(requestId,sent?null:zeroUsage,{status:e.status||502,providerId,latency:Date.now()-start,errorCode:e.code||'upstream_failure'});if(started){if(!res.destroyed)res.end('data: '+JSON.stringify({error:{message:'The upstream stream was interrupted.',type:'upstream_error',code:'upstream_error'}})+'\n\ndata: [DONE]\n\n');}else throw e;
+}finally{clearTimeout(timeout);await release().catch(()=>{});await redis('DEL','reservation:'+requestId).catch(()=>{});}
+});
+app.post('/v1/messages',(req,res)=>res.status(501).json({error:{type:'not_implemented',message:'Native Anthropic compatibility is not yet verified. Use /v1/chat/completions.',code:'not_implemented'}}));
+}

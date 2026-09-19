@@ -1,0 +1,28 @@
+{
+  "name": "modelmint",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server/index.mjs",
+    "build": "next build --webpack",
+    "start": "NODE_ENV=production node server/index.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:integration": "node tests/database.integration.mjs"
+  },
+  "dependencies": {
+    "next": "16.3.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "express": "5.2.1",
+    "pg": "8.23.0",
+    "ethers": "6.17.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/node": "22.18.1"
+  }
+}

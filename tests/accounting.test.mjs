@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {ceilProduct,usageCost,integer} from '../server/accounting.mjs';
+import {encrypt,decrypt} from '../server/db.mjs';
+import {verifyInvoice} from '../server/payments.mjs';
+test('decimal ratios round conservatively without binary floating point',()=>{assert.equal(ceilProduct(1n,'0.05'),1n);assert.equal(ceilProduct(1000n,'0.22'),220n);assert.equal(ceilProduct(9007199254740000n,'1.38'),12429934971541200n);});
+test('cached and reasoning details are subcategories, never double counted',()=>{const r=usageCost({prompt_tokens:1000,completion_tokens:500,prompt_tokens_details:{cached_tokens:400},completion_tokens_details:{reasoning_tokens:200}},{ratio:'2',input_rate:'3',cached_rate:'0.3',output_rate:'15',reasoning_rate:'10'});assert.deepEqual(r,{input:600n,cached:400n,reasoning:200n,output:300n,actual:1500n,weighted:3000n,micro:8420n});});
+test('malformed usage is rejected instead of reducing balances',()=>{assert.throws(()=>integer(-1));assert.throws(()=>integer(1.3));assert.throws(()=>usageCost({prompt_tokens:2,completion_tokens:1,prompt_tokens_details:{cached_tokens:3}},{ratio:'1'}));});
+test('provider encryption authenticates ciphertext',()=>{process.env.ENCRYPTION_KEY=Buffer.alloc(32,7).toString('base64');const encrypted=encrypt('test-credential-only');assert.equal(decrypt(encrypted),'test-credential-only');const b=Buffer.from(encrypted,'base64');b[16]^=1;assert.throws(()=>decrypt(b.toString('base64')));});
+const order={wallet:'0xabc',treasury:'0xdef',wei:'1234',created_at:'2026-09-19T00:00:00Z',expires:'2026-09-19T00:10:00Z'};
+const receipt={status:1,blockNumber:100,blockHash:'canonical'};
+const tx={from:'0xABC',to:'0xDEF',value:1234n};
+const block={number:100,hash:'canonical',timestamp:Date.parse('2026-09-19T00:01:00Z')/1000};
+test('payment requires exact recipient, sender, amount and finalized canonical receipt',async()=>{assert.equal(await verifyInvoice(order,receipt,tx,block,{number:100}),true);await assert.rejects(verifyInvoice(order,receipt,{...tx,value:1233n},block,{number:100}));await assert.rejects(verifyInvoice(order,receipt,{...tx,from:'0xBAD'},block,{number:100}));await assert.rejects(verifyInvoice(order,receipt,tx,block,{number:99}));await assert.rejects(verifyInvoice(order,{...receipt,status:0},tx,block,{number:100}));await assert.rejects(verifyInvoice(order,receipt,tx,{...block,hash:'reorg'},{number:100}));});
+test('late and pre-invoice payments cannot mint new credits',async()=>{await assert.rejects(verifyInvoice(order,receipt,tx,{...block,timestamp:block.timestamp+3600},{number:100}));await assert.rejects(verifyInvoice(order,receipt,tx,{...block,timestamp:block.timestamp-3600},{number:100}));});
