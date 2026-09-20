@@ -1,6 +1,6 @@
 import {SOLANA_CHAIN,solAddress,solSignature,verifySolMessage,solRpc,checkSolNetwork,verifySolInvoice,solPaymentTransaction} from './solana.mjs';
 import {JsonRpcProvider,verifyMessage,isAddress,parseEther,formatEther,formatUnits} from 'ethers';
-import {q,tx,id,hash,secret,fail} from './db.mjs';
+import {q,tx,id,hash,secret,fail,pool} from './db.mjs';
 import {user} from './auth.mjs';
 import {rateLimit} from './redis.mjs';
 import {backedCredit} from './accounting.mjs';
@@ -58,10 +58,10 @@ async function recoverRecentEvmPayments(){
 export function mountPayments(app){
 // Wallets can return before RPC finality. Reconcile memo-tagged treasury payments
 // independently so closing the modal or browser can never strand paid credit.
-setTimeout(()=>recoverRecentSolanaPayments(),3000).unref();
+if(pool){setTimeout(()=>recoverRecentSolanaPayments(),3000).unref();
 setInterval(()=>recoverRecentSolanaPayments(),30000).unref();
 setTimeout(()=>recoverRecentEvmPayments(),5000).unref();
-setInterval(()=>recoverRecentEvmPayments(),15000).unref();
+setInterval(()=>recoverRecentEvmPayments(),15000).unref();}
 app.post('/api/payments/solana/transaction',async(req,res)=>{const u=await user(req);await rateLimit('soltx:'+u.id,10,60);const order=(await q('SELECT * FROM orders WHERE id=$1 AND user_id=$2',[req.body.orderId,u.id])).rows[0];if(!order||order.chain_id!==SOLANA_CHAIN||order.state!=='pending'||new Date(order.expires)<=new Date())fail(400,'invalid_invoice','Create a fresh Solana invoice.');res.json(await solPaymentTransaction(order));});
 app.get('/api/payment/networks',(req,res)=>res.json(chains.map(({env,...c})=>({...c,configured:!!process.env[env]&&(c.id===SOLANA_CHAIN?solAddress(process.env.SOLANA_TREASURY_ADDRESS):isAddress(process.env.PAYMENT_TREASURY_ADDRESS||''))}))));
 app.post('/api/wallet/challenge',async(req,res)=>{const u=await user(req);await rateLimit('wallet:'+u.id,10,600);const sol=req.body.chainId===SOLANA_CHAIN;if(!(sol?solAddress(req.body.address):isAddress(req.body.address)))fail(400,'invalid_address','Choose a valid wallet address.');const nonce=secret(),message=`${new URL(process.env.APP_URL).host} wants to link your wallet for ModelMint payments.\n\nAddress: ${req.body.address}\nAccount: ${u.id}\nNonce: ${nonce}\nExpires in 5 minutes.\nThis signature does not authorize a transaction.`;await q("INSERT INTO challenges(hash,user_id,kind,data,expires) VALUES($1,$2,'wallet',$3,now()+interval '5 minutes')",[hash(nonce),u.id,{message,address:req.body.address,sol}]);res.json({nonce,message});});

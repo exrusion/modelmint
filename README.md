@@ -91,6 +91,14 @@ GitHub `exrusion/modelmint`, branch `main`, now drives Railway deployments throu
 
 The pre-deploy runner executes isolated database/Redis integration checks, provider authentication, and bounded synthetic live-provider checks. Live checks are recorded once per diagnostic version in the audit table; only usage and verification metadata are retained. They never enable models, mint balances, or change physical inventory.
 
+### $ROUTERS holder rewards
+
+The holder-reward page verifies the token at `0xf1498261e22d5232361f5188b5238e495abdaecf` on Robinhood Chain (chain ID 4663). The default tiers are a continuous 12-hour hold of 1,000,000 tokens for 2,000,000 promotional API base tokens, or 10,000,000 tokens for 3,000,000 promotional API base tokens. These values, the claim switch and reward expiry are operator-configurable in platform settings.
+
+Claims require X authentication plus an EIP-191 wallet signature over a five-minute, account-bound nonce. The signature is not a transaction or token approval. The server reads the current balance at a near-finalized block and reconstructs the most recent threshold crossing from the verified ERC-20 Transfer log, so a transfer below a tier resets that tier's clock. Database uniqueness enforces one claim per X account and one claim per wallet. A holder wallet is stored separately and never replaces the user's payment wallet.
+
+Rewards are promotional service credit, not transferable assets or cash. They expire after the configured period, can be spent only on promotional models, and are issued only when uncommitted inventory can back the grant. Never enable claims without a healthy archival-capable `ROBINHOOD_RPC_URL`, sufficient inventory and verified promotional models.
+
 ### Verified on Railway
 
 Deployment `41b26eb8-4bf3-4137-a4a5-9426574bffc6` passed the production build, health check, and all isolated integration checks, including SSE CRLF delimiters split between network chunks. Provider authentication discovered 78 model IDs. Claude Haiku returned a real response and usage; GPT-5.4 Mini returned HTTP 503 on all four attempted capabilities. Deployment `361957b9-fd7c-46d3-99fa-6f3a6f0d989f` then passed real GPT-5.6 Sol non-streaming, streaming, forced tool calling, JSON output, usage reporting, and a second Claude Haiku request. These checks do not establish availability or pricing of other catalogue models. Customer gateway accounting was verified separately using isolated fixtures; the live customer purchase, API-key and model-request flow has since been verified with a paid Solana checkout.
