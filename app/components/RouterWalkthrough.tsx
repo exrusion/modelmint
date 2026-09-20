@@ -28,6 +28,21 @@ const timeline=[
 const clamp=(value:number,min=0,max=1)=>Math.min(max,Math.max(min,value));
 const ease=(value:number)=>1-Math.pow(1-clamp(value),3);
 
+type PublicSignup={username:string;created_at:string};
+
+function SignupFeed(){
+  const [signups,setSignups]=useState<PublicSignup[]>([]);
+  useEffect(()=>{
+    const controller=new AbortController();
+    fetch('/api/public',{signal:controller.signal})
+      .then(response=>response.ok?response.json():Promise.reject(new Error('Signup feed unavailable')))
+      .then(data=>setSignups(Array.isArray(data.signups)?data.signups:[]))
+      .catch(error=>{if(error.name!=='AbortError')setSignups([])});
+    return()=>controller.abort();
+  },[]);
+  return <section className={styles.signupFeed} aria-labelledby="recent-signups-title"><div className={styles.signupHeading}><div><span>ROUTERS COMMUNITY</span><h2 id="recent-signups-title">Recent signups</h2></div><p><i/> LIVE</p></div>{signups.length?<div className={styles.signupGrid}>{signups.map(signup=><a href={`https://x.com/${signup.username}`} target="_blank" rel="noreferrer" key={`${signup.username}-${signup.created_at}`}><b>{signup.username.slice(0,1).toUpperCase()}</b><span><strong>@{signup.username}</strong><small>Joined {new Date(signup.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small></span><em>↗</em></a>)}</div>:<div className={styles.signupEmpty}>New Router builders will appear here.</div>}<p className={styles.signupPrivacy}>Public X handles and signup times only. Wallets, balances and API activity stay private.</p></section>;
+}
+
 type StageProps={active:boolean;children:React.ReactNode;className?:string};
 export function WalkthroughStage({active,children,className=''}:StageProps){
   return <div className={`${styles.scene} ${active?styles.active:''} ${className}`} aria-hidden={!active}>{children}</div>;
@@ -135,5 +150,5 @@ export default function RouterWalkthrough(){
   const stageProgress=clamp((elapsed-stage.start)/(stage.end-stage.start));
   const sceneProps=(id:typeof stages[number]['id'])=>({active:stage.id===id,progress:stage.id===id?stageProgress:0});
 
-  return <section className={styles.walkthrough} ref={rootRef} aria-labelledby="router-walkthrough-title"><div className={styles.heading}><div><span>PRODUCT WALKTHROUGH</span><h2 id="router-walkthrough-title">See how Routers works</h2></div><p>One balance. Every model. Half the spend.</p></div><div className={styles.frame}><div className={styles.browserBar}><span className={styles.windowDots}><i/><i/><i/></span><span className={styles.address}><i/> routers.markets <b>DEMO</b></span><span className={styles.timer}>{Math.floor(elapsed).toString().padStart(2,'0')} / 50</span></div><div className={styles.viewport}><IntroScene active={stage.id==='intro'}/><SignInScene {...sceneProps('signin')}/><CreditPurchaseScene {...sceneProps('credit')}/><NetworkScene {...sceneProps('pay')}/><ModelRoutingScene {...sceneProps('models')}/><DashboardScene {...sceneProps('dashboard')}/><MigrationScene {...sceneProps('connect')}/><FinalScene active={stage.id==='final'}/></div><div className={styles.controls}><div className={styles.controlButtons}><button type="button" onClick={togglePlayback} aria-label={playing?'Pause walkthrough':'Play walkthrough'}>{playing?'Ⅱ':'▶'} <span>{playing?'Pause':'Play'}</span></button><button type="button" onClick={restart} aria-label="Restart walkthrough">↺ <span>Restart</span></button></div><ProgressTimeline elapsed={elapsed} onSeek={seek}/></div></div>{reducedMotion&&<p className={styles.reducedNote}>Automatic motion is paused because reduced motion is enabled. Use the timeline to explore each stage.</p>}</section>;
+  return <><section className={styles.walkthrough} ref={rootRef} aria-labelledby="router-walkthrough-title"><div className={styles.heading}><div><span>PRODUCT WALKTHROUGH</span><h2 id="router-walkthrough-title">See how Routers works</h2></div><p>One balance. Every model. Half the spend.</p></div><div className={styles.frame}><div className={styles.browserBar}><span className={styles.windowDots}><i/><i/><i/></span><span className={styles.address}><i/> routers.markets <b>DEMO</b></span><span className={styles.timer}>{Math.floor(elapsed).toString().padStart(2,'0')} / 50</span></div><div className={styles.viewport}><IntroScene active={stage.id==='intro'}/><SignInScene {...sceneProps('signin')}/><CreditPurchaseScene {...sceneProps('credit')}/><NetworkScene {...sceneProps('pay')}/><ModelRoutingScene {...sceneProps('models')}/><DashboardScene {...sceneProps('dashboard')}/><MigrationScene {...sceneProps('connect')}/><FinalScene active={stage.id==='final'}/></div><div className={styles.controls}><div className={styles.controlButtons}><button type="button" onClick={togglePlayback} aria-label={playing?'Pause walkthrough':'Play walkthrough'}>{playing?'Ⅱ':'▶'} <span>{playing?'Pause':'Play'}</span></button><button type="button" onClick={restart} aria-label="Restart walkthrough">↺ <span>Restart</span></button></div><ProgressTimeline elapsed={elapsed} onSeek={seek}/></div></div>{reducedMotion&&<p className={styles.reducedNote}>Automatic motion is paused because reduced motion is enabled. Use the timeline to explore each stage.</p>}</section><SignupFeed/></>;
 }
