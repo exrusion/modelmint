@@ -28,7 +28,7 @@ const timeline=[
 const clamp=(value:number,min=0,max=1)=>Math.min(max,Math.max(min,value));
 const ease=(value:number)=>1-Math.pow(1-clamp(value),3);
 
-type PublicSignup={username:string;created_at:string};
+type PublicSignup={username:string;avatar_url?:string|null;created_at:string};
 
 function SignupFeed(){
   const [signups,setSignups]=useState<PublicSignup[]>([]);
@@ -40,7 +40,7 @@ function SignupFeed(){
       .catch(error=>{if(error.name!=='AbortError')setSignups([])});
     return()=>controller.abort();
   },[]);
-  return <section className={styles.signupFeed} aria-labelledby="recent-signups-title"><div className={styles.signupHeading}><div><span>ROUTERS COMMUNITY</span><h2 id="recent-signups-title">Recent signups</h2></div><p><i/> LIVE</p></div>{signups.length?<div className={styles.signupGrid}>{signups.map(signup=><a href={`https://x.com/${signup.username}`} target="_blank" rel="noreferrer" key={`${signup.username}-${signup.created_at}`}><b>{signup.username.slice(0,1).toUpperCase()}</b><span><strong>@{signup.username}</strong><small>Joined {new Date(signup.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small></span><em>↗</em></a>)}</div>:<div className={styles.signupEmpty}>New Router builders will appear here.</div>}<p className={styles.signupPrivacy}>Public X handles and signup times only. Wallets, balances and API activity stay private.</p></section>;
+  return <section className={styles.signupFeed} aria-labelledby="recent-signups-title"><div className={styles.signupHeading}><div><span>ROUTERS COMMUNITY</span><h2 id="recent-signups-title">Recent signups</h2></div><p><i/> LIVE</p></div>{signups.length?<div className={styles.signupGrid}>{signups.map(signup=><a href={`https://x.com/${signup.username}`} target="_blank" rel="noreferrer" key={`${signup.username}-${signup.created_at}`}><b><span>{signup.username.slice(0,1).toUpperCase()}</span><img src={signup.avatar_url||`https://unavatar.io/x/${encodeURIComponent(signup.username)}`} alt={`@${signup.username} profile`} loading="lazy" referrerPolicy="no-referrer" onError={event=>{event.currentTarget.hidden=true}}/></b><span><strong>@{signup.username}</strong><small>Joined {new Date(signup.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small></span><em>↗</em></a>)}</div>:<div className={styles.signupEmpty}>New Router builders will appear here.</div>}<p className={styles.signupPrivacy}>Public X handles and signup times only. Wallets, balances and API activity stay private.</p></section>;
 }
 
 type StageProps={active:boolean;children:React.ReactNode;className?:string};
