@@ -43,3 +43,6 @@
 
 /* X signup profile images. */
 .signupGrid a>b{position:relative;overflow:hidden}.signupGrid a>b span{position:absolute;inset:0;display:grid;place-items:center}.signupGrid a>b img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#172011}
+
+/* Complete community signup rail. */
+.signupGrid{display:flex;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}.signupTrack{display:flex;width:max-content;animation:community-scroll 30s linear infinite;will-change:transform}.signupGroup{display:flex;gap:10px;padding-right:10px}.signupGroup a{width:270px;flex:none}.signupGrid:hover .signupTrack,.signupGrid:focus-within .signupTrack{animation-play-state:paused}@keyframes community-scroll{to{transform:translateX(-50%)}}@media(max-width:600px){.signupGroup a{width:240px}.signupGrid a:nth-child(n+5){display:grid}}@media(prefers-reduced-motion:reduce){.signupGrid{overflow-x:auto;mask-image:none}.signupTrack{animation:none}.signupGroup[aria-hidden=true]{display:none}}
