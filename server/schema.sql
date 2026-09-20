@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS orders (id uuid PRIMARY KEY, user_id uuid REFERENCES 
 CREATE TABLE IF NOT EXISTS audit (id bigserial PRIMARY KEY, actor uuid REFERENCES users(id), action text NOT NULL, target text, details jsonb NOT NULL DEFAULT '{}', created_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS product_updates (id uuid PRIMARY KEY, title text NOT NULL, description text NOT NULL, status text NOT NULL DEFAULT 'planned' CHECK(status IN ('planned','building','testing','live')), eta text, link text, position int NOT NULL DEFAULT 0, published boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS product_updates_public ON product_updates(published,position,created_at DESC);
+CREATE TABLE IF NOT EXISTS app_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS sol_wallet text;
 ALTER TABLE promo_claims ALTER COLUMN email DROP NOT NULL;
