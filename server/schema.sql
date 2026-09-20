@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS requests (id uuid PRIMARY KEY, user_id uuid REFERENCE
 CREATE INDEX IF NOT EXISTS requests_user_time ON requests(user_id,created_at);
 CREATE TABLE IF NOT EXISTS orders (id uuid PRIMARY KEY, user_id uuid REFERENCES users(id), chain_id int NOT NULL, wallet text NOT NULL, treasury text NOT NULL, pay_usd int NOT NULL, credit_micro bigint NOT NULL, base_tokens bigint NOT NULL, wei numeric(78,0) NOT NULL, quote_price text NOT NULL, state text NOT NULL DEFAULT 'pending', tx_hash text, created_at timestamptz NOT NULL DEFAULT now(), expires timestamptz NOT NULL, confirmed_at timestamptz, UNIQUE(chain_id,tx_hash));
 CREATE TABLE IF NOT EXISTS audit (id bigserial PRIMARY KEY, actor uuid REFERENCES users(id), action text NOT NULL, target text, details jsonb NOT NULL DEFAULT '{}', created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS product_updates (id uuid PRIMARY KEY, title text NOT NULL, description text NOT NULL, status text NOT NULL DEFAULT 'planned' CHECK(status IN ('planned','building','testing','live')), eta text, link text, position int NOT NULL DEFAULT 0, published boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS product_updates_public ON product_updates(published,position,created_at DESC);
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS sol_wallet text;
 ALTER TABLE promo_claims ALTER COLUMN email DROP NOT NULL;
