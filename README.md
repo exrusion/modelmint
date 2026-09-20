@@ -105,6 +105,8 @@ The landing page has a compact credit calculator, bold lime-highlighted headline
 
 Solana wallets sign a single-use ownership challenge. Each server-generated transaction transfers the quoted lamports and includes the invoice ID as a memo. Credit issuance requires a successful finalized mainnet transaction with the exact signer, recipient, amount and invoice memo, within the quote window. Signatures retain case and the database enforces one claim per network/signature. Unit fixtures verify failures and signature binding; a real wallet purchase remains untested until the receiving address and inventory are configured. Phantom-compatible browser providers are supported; mobile users can use the wallet’s in-app browser.
 
+Checkout supports two coexisting methods. Connected-wallet checkout keeps the signed ownership challenge and memo-bound transaction flow. Direct-address checkout does not connect a wallet: it assigns the invoice a unique exact native-token amount, displays the treasury address and amount, and watches finalized Solana, Ethereum and Robinhood blocks for a matching transfer. Exact recipient, amount, invoice window, canonical finality and one-time ledger settlement are still enforced. Users must send the exact displayed amount before the quote expires.
+
 Sources: https://solana.com/docs/rpc/http/gettransaction and https://docs.phantom.com/solana/sending-a-transaction
 
 ### Artwork

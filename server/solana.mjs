@@ -14,14 +14,15 @@ export function verifySolInvoice(order,result,signature){
  if(result.meta.err!==null)fail(400,'payment_failed','The Solana transaction failed.');
  if(result.transaction.signatures?.[0]!==signature)fail(400,'payment_mismatch','Signature does not match.');
  const message=result.transaction.message,keys=message.accountKeys;
- if(!keys.some(k=>k.signer&&String(k.pubkey)===order.wallet))fail(400,'payment_mismatch','The invoice wallet must sign the payment.');
+ const direct=order.wallet==='direct';
+ if(!direct&&!keys.some(k=>k.signer&&String(k.pubkey)===order.wallet))fail(400,'payment_mismatch','The invoice wallet must sign the payment.');
  const instructions=message.instructions;
  const transfers=instructions.filter(i=>String(i.programId)==='11111111111111111111111111111111'&&i.parsed?.type==='transfer');
- const matching=transfers.filter(i=>i.parsed.info.source===order.wallet&&i.parsed.info.destination===order.treasury&&Number.isSafeInteger(i.parsed.info.lamports)&&BigInt(i.parsed.info.lamports)===BigInt(order.wei));
+ const matching=transfers.filter(i=>(direct||i.parsed.info.source===order.wallet)&&i.parsed.info.destination===order.treasury&&Number.isSafeInteger(i.parsed.info.lamports)&&BigInt(i.parsed.info.lamports)===BigInt(order.wei));
  const memo=instructions.some(i=>String(i.programId)===MEMO&&i.parsed==='modelmint:'+order.id);
  const treasuryIndex=keys.findIndex(k=>String(k.pubkey)===order.treasury);
  const before=result.meta.preBalances?.[treasuryIndex],after=result.meta.postBalances?.[treasuryIndex];
- if(matching.length!==1||!memo||!Number.isSafeInteger(before)||!Number.isSafeInteger(after)||BigInt(after)-BigInt(before)<BigInt(order.wei))fail(400,'payment_mismatch','Recipient, amount or invoice reference does not match.');
+ if(matching.length!==1||(!direct&&!memo)||!Number.isSafeInteger(before)||!Number.isSafeInteger(after)||BigInt(after)-BigInt(before)<BigInt(order.wei))fail(400,'payment_mismatch','Recipient, amount or invoice reference does not match.');
  const time=result.blockTime*1000;if(time<new Date(order.created_at).getTime()-15000||time>new Date(order.expires).getTime())fail(400,'quote_expired','Payment was outside the quote window; contact support for review.');
  return true;
 }
