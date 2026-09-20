@@ -5,10 +5,10 @@ import {findContinuousHoldingBlock,grantForBalance,HOLDER_REWARD_DEFAULTS,HOLDER
 const unit=10n**18n;
 
 test('holder reward grants only the configured tier',()=>{
- assert.equal(grantForBalance(999999n*unit),0n);
- assert.equal(grantForBalance(1000000n*unit),2000000n);
- assert.equal(grantForBalance(9999999n*unit),2000000n);
- assert.equal(grantForBalance(10000000n*unit),3000000n);
+ assert.equal(grantForBalance(1999999n*unit),0n);
+ assert.equal(grantForBalance(2000000n*unit),500000n);
+ assert.equal(grantForBalance(9999999n*unit),500000n);
+ assert.equal(grantForBalance(10000000n*unit),5000000n);
 });
 
 test('holder thresholds remain operator configurable',()=>{

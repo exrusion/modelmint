@@ -93,7 +93,7 @@ The pre-deploy runner executes isolated database/Redis integration checks, provi
 
 ### $ROUTERS holder rewards
 
-The holder-reward page verifies the token at `0xf1498261e22d5232361f5188b5238e495abdaecf` on Robinhood Chain (chain ID 4663). The default tiers are a continuous 12-hour hold of 1,000,000 tokens for 2,000,000 promotional API base tokens, or 10,000,000 tokens for 3,000,000 promotional API base tokens. These values, the claim switch and reward expiry are operator-configurable in platform settings.
+The holder-reward page verifies the token at `0xf1498261e22d5232361f5188b5238e495abdaecf` on Robinhood Chain (chain ID 4663). The default tiers are a continuous 12-hour hold of 2,000,000 tokens for 500,000 promotional API base tokens, or 10,000,000 tokens for 5,000,000 promotional API base tokens. These values, the claim switch and reward expiry are operator-configurable in platform settings.
 
 Claims require X authentication plus an EIP-191 wallet signature over a five-minute, account-bound nonce. The signature is not a transaction or token approval. The server reads the current balance at a near-finalized block and reconstructs the most recent threshold crossing from the verified ERC-20 Transfer log, so a transfer below a tier resets that tier's clock. Database uniqueness enforces one claim per X account and one claim per wallet. A holder wallet is stored separately and never replaces the user's payment wallet.
 

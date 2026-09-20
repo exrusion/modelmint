@@ -13,10 +13,10 @@ export const HOLDER_TOKEN_DECIMALS=18;
 export const HOLDER_REWARD_DEFAULTS={
  holderRewardsEnabled:true,
  holderRewardHoldSeconds:'43200',
- holderRewardMinTokens:'1000000',
+ holderRewardMinTokens:'2000000',
  holderRewardBonusTokens:'10000000',
- holderRewardBaseGrant:'2000000',
- holderRewardBonusGrant:'3000000',
+ holderRewardBaseGrant:'500000',
+ holderRewardBonusGrant:'5000000',
  holderRewardExpiryDays:'7'
 };
 

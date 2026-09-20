@@ -15,7 +15,7 @@ type RewardStatus={
  eligibleRewardTokens?:string;rewardTokens?:string;holdingSince?:string;claimedAt?:string;
 };
 type WalletOption={info:{uuid:string;name:string;icon?:string};provider:{request:(args:{method:string;params?:unknown[]})=>Promise<any>}};
-const FALLBACK_CONFIG:Config={enabled:true,chainId:4663,chainName:'Robinhood Chain',tokenAddress:'0xf1498261e22d5232361f5188b5238e495abdaecf',tokenSymbol:'ROUTERSMARKET',holdSeconds:43200,minimumTokens:'1000000',bonusTokens:'10000000',baseGrant:'2000000',bonusGrant:'3000000',expiryDays:7,claimed:0,explorer:'https://robinhoodchain.blockscout.com/token/0xf1498261e22d5232361f5188b5238e495abdaecf'};
+const FALLBACK_CONFIG:Config={enabled:true,chainId:4663,chainName:'Robinhood Chain',tokenAddress:'0xf1498261e22d5232361f5188b5238e495abdaecf',tokenSymbol:'ROUTERSMARKET',holdSeconds:43200,minimumTokens:'2000000',bonusTokens:'10000000',baseGrant:'500000',bonusGrant:'5000000',expiryDays:7,claimed:0,explorer:'https://robinhoodchain.blockscout.com/token/0xf1498261e22d5232361f5188b5238e495abdaecf'};
 
 async function api(path:string,body?:Record<string,unknown>){
  const response=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'});
@@ -63,7 +63,7 @@ export default function HolderRewards({standalone=false}:{standalone?:boolean}){
  async function checkAgain(){setBusy(true);setMessage('Checking Robinhood Chain…');try{await loadStatus();setTick(0);setMessage('Holding status refreshed.');}catch(error:any){setMessage(error.message);}finally{setBusy(false);}}
 
  return <section id="holder-rewards" className={`holder-rewards section page-width${standalone?' holder-rewards-standalone':''}`}>
-  <div className="holder-reward-heading"><div><span className="eyebrow">HOLD. VERIFY. BUILD.</span><h2>Hold $ROUTERS.<br/>Claim up to <mark>3M tokens.</mark></h2></div><p>Keep the qualifying token balance on Robinhood Chain for 12 continuous hours. Then sign a free message and claim promotional API tokens.</p></div>
+  <div className="holder-reward-heading"><div><span className="eyebrow">HOLD. VERIFY. BUILD.</span><h2>Hold $ROUTERS.<br/>Claim up to <mark>5M tokens.</mark></h2></div><p>Keep the qualifying token balance on Robinhood Chain for 12 continuous hours. Then sign a free message and claim promotional API tokens.</p></div>
   <div className="holder-reward-shell">
    <div className="holder-reward-visual" aria-hidden="true"><div className="holder-orbit orbit-one"/><div className="holder-orbit orbit-two"/><span className="holder-node node-one"/><span className="holder-node node-two"/><span className="holder-node node-three"/><div className="holder-logo"><Image src="/routers-logo.webp" alt="" width={128} height={128}/></div><span className="holder-route route-one"/><span className="holder-route route-two"/><div className="holder-visual-copy"><small>ROBINHOOD CHAIN · 4663</small><strong>12H</strong><span>continuous hold</span></div></div>
    <div className="holder-reward-card">
