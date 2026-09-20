@@ -117,6 +117,7 @@ code,pre,textarea,.eyebrow,.announcement-label,.price-input strong,.credit-revea
 @media(max-width:480px){.payment-actions{grid-template-columns:1fr}.direct-amount code{font-size:15px}}
 
 /* Public roadmap and admin update editor */
+.updates-page{min-height:calc(100vh - 260px);padding:18px 0 90px}
 .updates-section{padding-top:58px;padding-bottom:18px}
 .updates-section .section-heading{margin-bottom:22px}
 .updates-section .section-heading h2{font-size:clamp(30px,4vw,46px)}
