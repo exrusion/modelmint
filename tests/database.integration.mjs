@@ -15,6 +15,13 @@ const {rateLimit,concurrency,redis}=await import('../server/redis.mjs');
 let server,upstream;
 try{
 await initialize();
+const launchSettings=(await q('SELECT data FROM settings WHERE id=1')).rows[0].data;
+assert.equal(launchSettings.inventory,'2048000000','supplier inventory keeps a 1M reconciliation buffer');
+const launchUpdates=(await q("SELECT title,link FROM product_updates WHERE title IN ('2B+ API token capacity is live','Gift API credit is live') ORDER BY title")).rows;
+assert.deepEqual(launchUpdates,[{title:'2B+ API token capacity is live',link:'/status'},{title:'Gift API credit is live',link:'/gifts'}]);
+await initialize();
+assert.equal((await q("SELECT count(*) n FROM product_updates WHERE title IN ('2B+ API token capacity is live','Gift API credit is live')")).rows[0].n,'2','launch migrations remain idempotent');
+console.log('PASS expanded supplier inventory and public update seeds');
 const uid=randomUUID(),kid=randomUUID();
 await q("UPDATE settings SET data=data || '{\"inventory\":10000000,\"baseTokensPerDollar\":100000,\"inventoryCostMicro\":0.001}'::jsonb");
 await q("INSERT INTO users(id,x_id,username,purchased_micro,base_tokens) VALUES($1,$2,'integration-fixture',15,15)",[uid,uid]);

@@ -25,12 +25,12 @@ else{
  await tx(async c=>{
  const s=(await c.query('SELECT data FROM settings WHERE id=1 FOR UPDATE')).rows[0].data;
  if((await c.query('SELECT id FROM audit WHERE action=$1',[action])).rowCount)return;
- // Screenshot reports a rounded 1,049M remaining. Keep a 1M reconciliation buffer.
- if(BigInt(s.inventory||0)===0n)s.inventory='1048000000';
+ // The latest supplier dashboard reports a rounded 2,049M remaining. Keep a 1M reconciliation buffer.
+ if(BigInt(s.inventory||0)===0n)s.inventory='2048000000';
  s.baseTokensPerDollar=1000000;s.inventoryCostKnown=false;s.purchasing=true;
  for(const m of models){const upstream=aliases[m.id]||m.id;const checked=results.get(upstream);const rate=String(m.ratio);const verified=!!checked?.ok;const advanced=upstream==='gpt-5.6-sol'&&verified;await c.query('INSERT INTO models(id,name,family,upstream_id,ratio,premium) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO NOTHING',[m.id,m.name,m.family,upstream,rate,Number(rate)>=3]);await c.query('UPDATE models SET upstream_id=$2,input_rate=$3,output_rate=$3,cached_rate=$3,reasoning_rate=$3,verified=$4,enabled=$4,tools=$5,json_format=$5 WHERE id=$1',[m.id,upstream,rate,verified,advanced]);}
  await c.query('UPDATE settings SET data=$1 WHERE id=1',[s]);
- await c.query('INSERT INTO audit(action,target,details) VALUES($1,$2,$3)',[action,'platform',{offer:'Pay $10, receive $20 usage credit',baseTokensPerCreditDollar:1000000,inventorySource:'User supplied RelayModels dashboard, 1049M rounded remaining; 1M buffer retained',supplierCost:'undisclosed; not required',checks:Object.fromEntries(results)}]);
+ await c.query('INSERT INTO audit(action,target,details) VALUES($1,$2,$3)',[action,'platform',{offer:'Pay $10, receive $20 usage credit',baseTokensPerCreditDollar:1000000,inventorySource:'Owner-supplied supplier dashboard, 2049M rounded remaining; 1M buffer retained',supplierCost:'undisclosed; not required',checks:Object.fromEntries(results)}]);
  });
  console.log('CHECKOUT_OPEN '+JSON.stringify({verifiedModels:[...results.values()].filter(x=>x.ok).length,baseTokensPerCreditDollar:1000000,creditMultiplier:2}));
 }
