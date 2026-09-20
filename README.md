@@ -4,6 +4,8 @@ Next.js / TypeScript marketplace with an Express OpenAI-compatible gateway, Post
 
 One Routers API key and the `https://routers.markets/v1` base URL work across every enabled model allowed for that key. OpenAI-compatible refers to the request format; customers select GPT, Claude, Gemini, Grok, DeepSeek, Qwen and other available families by changing the `model` ID.
 
+`routers/auto` is the only model ID that permits model-to-model selection. The Routie routing agent filters the key's verified models for required capabilities, context, balance and allowlist, then ranks them with `balanced`, `cheapest`, `fastest` or `best`. Exact model IDs always remain exact.
+
 ## Configuration
 
 Copy `.env.example` to a private environment file for local work. On Railway, configure Variables directly. Never commit credentials.
@@ -68,8 +70,9 @@ Email delivery uses the existing optional Resend configuration. The raw recipien
 
 - `GET /v1/models`
 - `POST /v1/chat/completions`: streaming and non-streaming, tool/JSON/vision payloads when enabled per model.
+- `routers/auto`: optional `routing_strategy` request field or `X-Routers-Strategy` header with `balanced`, `cheapest`, `fastest` or `best`. The selected model is returned in the response `model` field and `X-Routers-Model` header; `X-Routers-Fallbacks` reports how many earlier candidates were safely skipped.
 - `POST /v1/messages`: explicit 501 until a native Anthropic adapter is implemented and verified.
-- Fallback retries only explicit upstream rejection statuses before streaming, within the same public model mapping. Ambiguous transport failures do not trigger duplicate upstream requests.
+- Exact model IDs retry only providers mapped to that same model. `routers/auto` can continue to the next compatible model after an explicit upstream rejection and before any output starts. Ambiguous transport failures and interrupted streams do not trigger duplicate model requests.
 - No prompt/response database columns. Request bodies are not logged.
 
 ## Verification
@@ -130,6 +133,10 @@ Sources: https://solana.com/docs/rpc/http/gettransaction and https://docs.phanto
 Asset: `public/marble-column.webp`, generated using the built-in image generator and optimized for web delivery.
 
 Prompt: Use case: stylized-concept. Asset for the outer edge of an AI credits website. Create one very tall slim classical ivory marble pilaster, front elevation, complete column from ornate ionic scroll capital at top through long fluted shaft to a small square plinth bottom. Elegant weathered white marble with subtle charcoal veining, carved scrolls and very thin vivid fluorescent chartreuse lime green metal rings just below capital and above plinth. Sophisticated photorealistic 3D architectural render, diffuse daylight, gentle soft shadows. Isolated on a flat pure warm white #f7f7f2 backdrop. Portrait composition approximately 1:5 ratio; column centered, almost full height with very little empty margin. No text, no logos, no extra objects, no scene, no perspective tilt. This is an original decorative architectural website asset.
+
+Asset: `public/routie-logo.png`, generated from `public/routers-logo.webp` as the transparent Routie agent mark.
+
+Prompt: Create a polished square transparent-background logo icon for “Routie”, the automatic model-routing agent inside Routers Markets. Preserve the reference brand language exactly: one black cracked-marble core, small warm-cream marble satellite spheres, reflective neon-lime chrome routing tubes and joints. Evolve it into a compact autonomous decision emblem: the central black marble core should feel intelligent and friendly through a subtle narrow lime-glass visor/aperture (abstract, not a face), with four clean outgoing routes ending in cream nodes, one route visibly selected by a brighter lime glow. Premium 3D product-render quality, crisp silhouette readable at 48px, centered with generous transparent padding, balanced symmetrical composition, soft studio highlights. No background, no square tile, no text, no letters, no numbers, no watermark, no extra objects.
 
 ## Owner-authorized double-credit launch
 
