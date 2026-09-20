@@ -61,7 +61,7 @@ await c.query('INSERT INTO requests(id,user_id,key_id,model_id,provider_id,statu
 });}
 export const zeroUsage={prompt_tokens:0,completion_tokens:0};
 export async function backedCredit(c,userId,micro,base,reference){const s=(await c.query('SELECT data FROM settings WHERE id=1 FOR UPDATE')).rows[0].data;
-const liability=(await c.query('SELECT COALESCE(sum(base_tokens+promo_tokens),0) n FROM users')).rows[0];const reserved=(await c.query("SELECT COALESCE(sum(max_weighted),0) n FROM reservations WHERE state IN ('reserved','review')")).rows[0];const pending=(await c.query("SELECT COALESCE(sum(base_tokens),0) n FROM orders WHERE state='pending' AND id::text<>$1",[reference])).rows[0];
-if(BigInt(liability.n)+BigInt(reserved.n)+BigInt(pending.n)+base>BigInt(s.inventory)*8n/10n)fail(409,'insufficient_backing','Insufficient uncommitted supplier inventory.');
+const liability=(await c.query('SELECT COALESCE(sum(base_tokens+promo_tokens),0) n FROM users')).rows[0];const reserved=(await c.query("SELECT COALESCE(sum(max_weighted),0) n FROM reservations WHERE state IN ('reserved','review')")).rows[0];const pending=(await c.query("SELECT COALESCE(sum(base_tokens),0) n FROM orders WHERE state='pending' AND id::text<>$1",[reference])).rows[0];const gifts=(await c.query("SELECT COALESCE(sum(base_tokens),0) n FROM credit_gifts WHERE state='pending'")).rows[0];
+if(BigInt(liability.n)+BigInt(reserved.n)+BigInt(pending.n)+BigInt(gifts.n)+base>BigInt(s.inventory)*8n/10n)fail(409,'insufficient_backing','Insufficient uncommitted supplier inventory.');
 const issued=await c.query("INSERT INTO ledgers(user_id,kind,delta,reference) VALUES($1,'dollar',$2,$3) ON CONFLICT DO NOTHING RETURNING id",[userId,String(micro),reference]);if(!issued.rowCount)return false;
 await ledger(c,userId,'raw-base',base,reference);await c.query('UPDATE users SET purchased_micro=purchased_micro+$2,base_tokens=base_tokens+$3 WHERE id=$1',[userId,String(micro),String(base)]);return true;}

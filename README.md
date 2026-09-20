@@ -56,6 +56,14 @@ Successful usage reconciles exactly once. Requests with ambiguous provider compl
 
 Pending invoices retain their inventory commitment until settled or manually investigated. An expired quote is not proof that no transaction was sent. Late or mismatched transfers require manual treasury review; they do not automatically credit an account. Blockchain refunds require a separately signed treasury transaction.
 
+## Gift API credit
+
+Authenticated users can transfer purchased API credit from the Gift Credit workspace to an existing X account, a verified-email account, or a cryptographically random claim link. The selected base-token allowance and its matching purchased microdollar balance always move together in one PostgreSQL transaction. Promotional signup credit and holder rewards never enter the gift flow.
+
+Existing recipients are credited immediately. Otherwise, the sender's balances are debited into a pending gift liability. Claim tokens are returned once and stored only as SHA-256 hashes. A row lock makes every claim single-use under concurrency. Senders can cancel pending gifts; unclaimed gifts expire after the configured period and restore both balances atomically. Pending gifts remain included in platform inventory and liability checks.
+
+Email delivery uses the existing optional Resend configuration. The raw recipient email is used for lookup and delivery but is not stored on a pending gift; only a masked label is retained. If delivery is unavailable, the sender can copy the claim link directly. Claim links are bearer capabilities and should be shared privately.
+
 ## Compatibility
 
 - `GET /v1/models`
@@ -73,7 +81,7 @@ npm run build
 npm run test:integration
 ```
 
-`test:integration` needs PostgreSQL and optionally Redis. It creates a uniquely named schema, uses isolated fixtures and drops only that schema after completion. It checks concurrent reservations, reconciliation, promotion priority, revocation, global limits, idempotent backed credits, Redis rate/concurrency limits, and local fixture-provider gateway streams/tool passthrough. Fixture-provider tests do not verify RelayModels or any real model.
+`test:integration` needs PostgreSQL and optionally Redis. It creates a uniquely named schema, uses isolated fixtures and drops only that schema after completion. It checks concurrent reservations, reconciliation, promotion priority, revocation, global limits, idempotent backed credits, atomic single-use gift claims, gift cancellation and expiry refunds, Redis rate/concurrency limits, and local fixture-provider gateway streams/tool passthrough. Fixture-provider tests do not verify RelayModels or any real model.
 
 Live X login, real upstream usage/capabilities, real wallet receipt verification, provider fallback against actual suppliers and mobile browser interactions remain release gates until exercised with configured credentials. Do not represent an unconfigured preview as a fully operating marketplace.
 

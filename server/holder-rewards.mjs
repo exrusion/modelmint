@@ -158,8 +158,9 @@ async function issueReward(account,status){
   const existing=(await client.query('SELECT * FROM holder_reward_claims WHERE user_id=$1 OR wallet=$2 FOR UPDATE',[account.id,status.wallet])).rows[0];if(existing)return existing;
   const held=(await client.query("SELECT COALESCE(sum(max_weighted),0) n FROM reservations WHERE state IN ('reserved','review')")).rows[0];
   const pending=(await client.query("SELECT COALESCE(sum(base_tokens),0) n FROM orders WHERE state='pending'")).rows[0];
+  const gifts=(await client.query("SELECT COALESCE(sum(base_tokens),0) n FROM credit_gifts WHERE state='pending'")).rows[0];
   const liabilities=(await client.query('SELECT COALESCE(sum(base_tokens+promo_tokens),0) n FROM users')).rows[0];
-  if(BigInt(liabilities.n)+BigInt(held.n)+BigInt(pending.n)+reward>BigInt(settings.inventory)*8n/10n)fail(409,'insufficient_backing','Holder rewards are temporarily at capacity. Try again later.');
+  if(BigInt(liabilities.n)+BigInt(held.n)+BigInt(pending.n)+BigInt(gifts.n)+reward>BigInt(settings.inventory)*8n/10n)fail(409,'insufficient_backing','Holder rewards are temporarily at capacity. Try again later.');
   const rewardMicro=reward,claimId=uuid(),expiry=Math.max(1,Number(settings.holderRewardExpiryDays||7));
   const inserted=await client.query('INSERT INTO holder_reward_claims(id,user_id,wallet,balance_wei,reward_tokens,reward_micro,snapshot_block,holding_since) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING RETURNING *',[claimId,account.id,status.wallet,status.balanceWei,String(reward),String(rewardMicro),status.snapshotBlock,status.claimHoldingSince]);
   if(!inserted.rowCount)return (await client.query('SELECT * FROM holder_reward_claims WHERE user_id=$1 OR wallet=$2',[account.id,status.wallet])).rows[0];
