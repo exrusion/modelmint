@@ -212,7 +212,7 @@ export default function RoutieChat({models=[]}:{models?:Model[]}){
       </form>
     </section>}
     <button type="button" className={styles.launcher} aria-label={open?'Close Routie':'Ask Routie'} aria-expanded={open} aria-controls="routie-chat" onClick={()=>setOpen(value=>!value)}>
-      <Image src="/routie-floating.png" alt="" width={1254} height={1254}/>
+      <Image src="/routie-floating.png" alt="" width={1254} height={1254} sizes="96px" unoptimized/>
     </button>
   </div>;
 }
