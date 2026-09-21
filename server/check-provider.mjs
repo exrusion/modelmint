@@ -12,13 +12,6 @@ try {
       const body=await response.json();
       if(!Array.isArray(body.data)||!body.data.every(m=>typeof m.id==='string')) throw new Error('Invalid catalogue');
       await q("UPDATE providers SET verified_at=now() WHERE id='00000000-0000-4000-8000-000000000001'");
-      const catalogue=body.data.map(model=>{
-        const safe={id:model.id};
-        for(const key of ['owned_by','name','description','context_length','max_context','max_output','input_price','output_price','pricing','capabilities','architecture'])
-          if(model[key]!==undefined)safe[key]=model[key];
-        return safe;
-      });
-      console.log('UPSTREAM_CATALOGUE '+JSON.stringify(catalogue));
       console.log('Provider check: authentication verified; '+body.data.length+' model IDs discovered. Model pricing remains subject to verification.');
     }
   }
