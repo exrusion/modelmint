@@ -211,8 +211,8 @@ export default function RoutieChat({models=[]}:{models?:Model[]}){
         <small>Answers use the live Routers catalogue. Never share API keys or seed phrases.</small>
       </form>
     </section>}
-    <button type="button" className={styles.launcher} aria-expanded={open} aria-controls="routie-chat" onClick={()=>setOpen(value=>!value)}>
-      <span><Image src="/routie-logo.png" alt="" width={54} height={54}/><i/></span><strong>{open?'Close':'Ask Routie'}</strong>
+    <button type="button" className={styles.launcher} aria-label={open?'Close Routie':'Ask Routie'} aria-expanded={open} aria-controls="routie-chat" onClick={()=>setOpen(value=>!value)}>
+      <Image src="/routie-floating.png" alt="" width={1254} height={1254}/>
     </button>
   </div>;
 }
