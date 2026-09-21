@@ -7,6 +7,7 @@ import {mountGateway} from './gateway.mjs';
 import {mountAuth,user,admin,reward} from './auth.mjs';
 import {mountPayments} from './payments.mjs';
 import {mountHolderRewards} from './holder-rewards.mjs';
+import {mountStaking} from './staking.mjs';
 import {expireGiftReservations,mountGiftCredit} from './gifts.mjs';
 import {backedCredit,integer,settle} from './accounting.mjs';
 import {redis,rateLimit} from './redis.mjs';
@@ -37,7 +38,7 @@ app.post('/api/admin/users/:id',async(req,res)=>{const u=await admin(req),b=req.
 app.post('/api/admin/credit',async(req,res)=>{const u=await admin(req);if(!req.body.reference||typeof req.body.reference!=='string')fail(400,'reference_required','An idempotent adjustment reference is required.');await tx(c=>backedCredit(c,req.body.userId,integer(req.body.micro),integer(req.body.baseTokens),'manual:'+req.body.reference));await audit(u,'credit.issued',req.body.userId,{reference:req.body.reference});res.json({ok:true});});
 app.post('/api/admin/reconcile',async(req,res)=>{const u=await admin(req);if(!req.body.usage)fail(400,'usage_required','Verified upstream usage is required.');const reservation=(await q('SELECT state,created_at FROM reservations WHERE id=$1',[req.body.requestId])).rows[0];if(!reservation||reservation.state==='settled'||Date.now()-new Date(reservation.created_at).getTime()<300000)fail(409,'reservation_active','Only unresolved reservations older than five minutes can be reconciled manually.');await settle(req.body.requestId,req.body.usage,{errorCode:'manual_reconciliation'});await audit(u,'usage.reconciled',req.body.requestId);res.json({ok:true});});
 app.get('/api/status',async(req,res)=>{const result={gateway:true,database:false,rateLimits:false,provider:false};try{await q('SELECT 1');result.database=true;}catch{}try{result.rateLimits=(await redis('PING'))==='PONG';}catch{}try{result.provider=Number((await q('SELECT count(*) n FROM providers WHERE verified_at IS NOT NULL AND enabled')).rows[0].n)>0;}catch{}res.json(result);});
-mountAuth(app);mountPayments(app);mountHolderRewards(app);mountGiftCredit(app);mountGateway(app);
+mountAuth(app);mountPayments(app);mountHolderRewards(app);mountStaking(app);mountGiftCredit(app);mountGateway(app);
 app.use(['/api','/v1'],(req,res)=>res.status(404).json({error:{message:'Endpoint not found.',code:'not_found'}}));
 app.use((err,req,res,next)=>{if(res.headersSent)return next(err);const status=err.status||500;res.status(status).json({error:{message:status<500?err.message:(err.status?err.message:'The service could not complete the request.'),type:err.code||'server_error',code:err.code||'server_error'},request_id:req.requestId});});
 const web=next({dev:process.env.NODE_ENV!=='production',hostname:'0.0.0.0',port:Number(process.env.PORT)||3000});await web.prepare();app.use((req,res)=>web.getRequestHandler()(req,res));app.listen(Number(process.env.PORT)||3000,'0.0.0.0',()=>console.log(brand.name+' listening'));
