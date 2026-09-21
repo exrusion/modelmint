@@ -4,8 +4,12 @@ UPDATE settings SET data='{"holderRewardsEnabled":true,"holderRewardHoldSeconds"
 UPDATE settings SET data=data||'{"holderRewardMinTokens":"2000000","holderRewardBonusTokens":"10000000","holderRewardBaseGrant":"500000","holderRewardBonusGrant":"5000000","holderRewardTiersV2":true}'::jsonb WHERE id=1 AND NOT(data?'holderRewardTiersV2');
 UPDATE settings SET data=data||'{"giftsEnabled":true,"giftMinTokens":"100000","giftMaxTokens":"50000000","giftExpiryDays":"7"}'::jsonb WHERE id=1 AND NOT(data?'giftsEnabled');
 UPDATE settings SET data=data||'{"stakingEnabled":true,"stakingRewardBps":"1000"}'::jsonb WHERE id=1 AND NOT(data?'stakingEnabled');
+UPDATE settings SET data=data||'{"referralsEnabled":true,"referralTokens":"250000","referralMicro":"250000","referralExpiryDays":"7"}'::jsonb WHERE id=1 AND NOT(data?'referralsEnabled');
 CREATE TABLE IF NOT EXISTS users (id uuid PRIMARY KEY, x_id text UNIQUE NOT NULL, username text NOT NULL, role text NOT NULL DEFAULT 'user', suspended boolean NOT NULL DEFAULT false, email text UNIQUE, email_verified boolean NOT NULL DEFAULT false, wallet text, created_at timestamptz NOT NULL DEFAULT now(), x_created_at timestamptz, ip_hash text, device_hash text, purchased_micro bigint NOT NULL DEFAULT 0 CHECK(purchased_micro>=0), promo_micro bigint NOT NULL DEFAULT 0 CHECK(promo_micro>=0), base_tokens bigint NOT NULL DEFAULT 0 CHECK(base_tokens>=0), promo_tokens bigint NOT NULL DEFAULT 0 CHECK(promo_tokens>=0), promo_expires timestamptz, daily_limit bigint, monthly_limit_micro bigint);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by uuid REFERENCES users(id);
+CREATE UNIQUE INDEX IF NOT EXISTS users_referral_code_unique ON users(referral_code) WHERE referral_code IS NOT NULL;
 CREATE TABLE IF NOT EXISTS sessions (hash text PRIMARY KEY, user_id uuid REFERENCES users(id), expires timestamptz NOT NULL);
 CREATE TABLE IF NOT EXISTS challenges (hash text PRIMARY KEY, user_id uuid REFERENCES users(id), kind text NOT NULL, data jsonb NOT NULL, expires timestamptz NOT NULL);
 CREATE TABLE IF NOT EXISTS promo_claims (x_id text PRIMARY KEY, email text UNIQUE, user_id uuid UNIQUE REFERENCES users(id), ip_hash text NOT NULL, device_hash text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
@@ -21,6 +25,8 @@ CREATE TABLE IF NOT EXISTS reservations (id uuid PRIMARY KEY, user_id uuid NOT N
 CREATE TABLE IF NOT EXISTS daily_capacity (day date PRIMARY KEY, used bigint NOT NULL DEFAULT 0 CHECK(used>=0));
 CREATE TABLE IF NOT EXISTS user_daily (user_id uuid REFERENCES users(id), day date, weighted bigint NOT NULL DEFAULT 0 CHECK(weighted>=0), micro bigint NOT NULL DEFAULT 0 CHECK(micro>=0), PRIMARY KEY(user_id,day));
 CREATE TABLE IF NOT EXISTS key_daily (key_id uuid REFERENCES api_keys(id), day date, micro bigint NOT NULL DEFAULT 0 CHECK(micro>=0), PRIMARY KEY(key_id,day));
+ALTER TABLE key_daily ADD COLUMN IF NOT EXISTS weighted bigint NOT NULL DEFAULT 0 CHECK(weighted>=0);
+ALTER TABLE key_daily ADD COLUMN IF NOT EXISTS requests bigint NOT NULL DEFAULT 0 CHECK(requests>=0);
 CREATE TABLE IF NOT EXISTS ledgers (id bigserial PRIMARY KEY, user_id uuid REFERENCES users(id), kind text NOT NULL, delta bigint NOT NULL, reference text NOT NULL, metadata jsonb NOT NULL DEFAULT '{}', created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(kind,reference));
 CREATE TABLE IF NOT EXISTS requests (id uuid PRIMARY KEY, user_id uuid REFERENCES users(id), key_id uuid REFERENCES api_keys(id), model_id text NOT NULL, provider_id uuid, status int NOT NULL, input_tokens bigint NOT NULL DEFAULT 0, cached_tokens bigint NOT NULL DEFAULT 0, reasoning_tokens bigint NOT NULL DEFAULT 0, output_tokens bigint NOT NULL DEFAULT 0, actual_tokens bigint NOT NULL DEFAULT 0, weighted_tokens bigint NOT NULL DEFAULT 0, charged_micro bigint NOT NULL DEFAULT 0, upstream_cost_micro bigint NOT NULL DEFAULT 0, latency_ms int NOT NULL, error_code text, created_at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS requests_user_time ON requests(user_id,created_at);
@@ -37,6 +43,8 @@ CREATE INDEX IF NOT EXISTS credit_gifts_pending_expiry ON credit_gifts(expires_a
 CREATE TABLE IF NOT EXISTS audit (id bigserial PRIMARY KEY, actor uuid REFERENCES users(id), action text NOT NULL, target text, details jsonb NOT NULL DEFAULT '{}', created_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS product_updates (id uuid PRIMARY KEY, title text NOT NULL, description text NOT NULL, status text NOT NULL DEFAULT 'planned' CHECK(status IN ('planned','building','testing','live')), eta text, link text, position int NOT NULL DEFAULT 0, published boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS product_updates_public ON product_updates(published,position,created_at DESC);
+CREATE TABLE IF NOT EXISTS referrals (id uuid PRIMARY KEY, referrer_user_id uuid NOT NULL REFERENCES users(id), referred_user_id uuid UNIQUE NOT NULL REFERENCES users(id), referral_code text NOT NULL, reward_tokens bigint NOT NULL CHECK(reward_tokens>0), reward_micro bigint NOT NULL CHECK(reward_micro>0), created_at timestamptz NOT NULL DEFAULT now(), CHECK(referrer_user_id<>referred_user_id));
+CREATE INDEX IF NOT EXISTS referrals_referrer_time ON referrals(referrer_user_id,created_at DESC);
 CREATE TABLE IF NOT EXISTS app_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS sol_wallet text;

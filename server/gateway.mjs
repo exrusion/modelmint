@@ -4,6 +4,7 @@ import {reserve,settle,ceilProduct,zeroUsage,promoEligible} from './accounting.m
 import {AUTO_MODEL_ID,AUTO_STRATEGIES,parseAutoStrategy,rankAutoModels,supportsAutoRequest} from './auto-routing.mjs';
 
 const RETRYABLE_UPSTREAM=new Set([401,403,404,408,425,429,500,502,503,504]);
+export function retryableProviderFailure(status){return status===null||RETRYABLE_UPSTREAM.has(Number(status));}
 
 export async function apiKey(req){
  const token=req.headers.authorization?.replace(/^Bearer /,'');
@@ -113,11 +114,12 @@ export function mountGateway(app){
      const outgoing=upstreamBody(body,model,maximum);
      let response,lastStatus=503;
      for(const provider of providers){
-      providerId=provider.id;sent=true;
-      response=await fetch(provider.base_url.replace(/\/$/,'')+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+decrypt(provider.encrypted_key),'Content-Type':'application/json','X-Request-Id':requestId},body:JSON.stringify(outgoing),redirect:'error',signal:controller.signal});
-      if(response.ok)break;
+      providerId=provider.id;
+      try{response=await fetch(provider.base_url.replace(/\/$/,'')+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+decrypt(provider.encrypted_key),'Content-Type':'application/json','X-Request-Id':requestId},body:JSON.stringify(outgoing),redirect:'error',signal:controller.signal});}
+      catch(error){if(controller.signal.aborted)throw error;lastStatus=502;response=null;sent=false;continue;}
+      if(response.ok){sent=true;break;}
       lastStatus=response.status;sent=false;await response.body?.cancel();
-      if(RETRYABLE_UPSTREAM.has(response.status))continue;
+      if(retryableProviderFailure(response.status))continue;
       fail(502,'upstream_error','The upstream rejected this request.');
      }
      if(!response?.ok){

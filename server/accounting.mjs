@@ -36,7 +36,7 @@ await c.query('UPDATE users SET purchased_micro=purchased_micro-$2,promo_micro=p
 await c.query('UPDATE api_keys SET spent_micro=spent_micro+$2,spent_tokens=spent_tokens+$3 WHERE id=$1',[k.id,String(maxMicro),String(maxWeighted)]);
 await c.query('UPDATE daily_capacity SET used=used+$1 WHERE day=CURRENT_DATE',[String(maxWeighted)]);
 await c.query('UPDATE user_daily SET weighted=weighted+$2,micro=micro+$3 WHERE user_id=$1 AND day=CURRENT_DATE',[u.id,String(maxWeighted),String(maxMicro)]);
-await c.query('UPDATE key_daily SET micro=micro+$2 WHERE key_id=$1 AND day=CURRENT_DATE',[k.id,String(maxMicro)]);
+await c.query('UPDATE key_daily SET micro=micro+$2,weighted=weighted+$3,requests=requests+1 WHERE key_id=$1 AND day=CURRENT_DATE',[k.id,String(maxMicro),String(maxWeighted)]);
 await c.query('INSERT INTO reservations(id,user_id,key_id,model_id,purchased_micro,promo_micro,base_tokens,promo_tokens,max_micro,max_weighted,rates) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',[requestId,u.id,k.id,m.id,String(bm),String(pm),String(bt),String(pt),String(maxMicro),String(maxWeighted),m]);
 await ledger(c,u.id,'dollar',-bm,requestId+':reserve');await ledger(c,u.id,'promo-dollar',-pm,requestId+':reserve');await ledger(c,u.id,'raw-base',-bt,requestId+':reserve');await ledger(c,u.id,'promo-token',-pt,requestId+':reserve');await ledger(c,null,'capacity',maxWeighted,requestId+':reserve');return {promo:pm>0n};
 });}
@@ -53,7 +53,7 @@ await c.query('UPDATE users SET purchased_micro=purchased_micro+$2,promo_micro=p
 await c.query('UPDATE api_keys SET spent_micro=spent_micro-$2,spent_tokens=spent_tokens-$3 WHERE id=$1',[r.key_id,String(refundMicro),String(refundTokens)]);
 await c.query('UPDATE daily_capacity SET used=used-$2 WHERE day=$1',[r.usage_day,String(refundTokens)]);
 await c.query('UPDATE user_daily SET weighted=weighted-$3,micro=micro-$4 WHERE user_id=$1 AND day=$2',[r.user_id,r.usage_day,String(refundTokens),String(refundMicro)]);
-await c.query('UPDATE key_daily SET micro=micro-$3 WHERE key_id=$1 AND day=$2',[r.key_id,r.usage_day,String(refundMicro)]);
+await c.query('UPDATE key_daily SET micro=micro-$3,weighted=weighted-$4 WHERE key_id=$1 AND day=$2',[r.key_id,r.usage_day,String(refundMicro),String(refundTokens)]);
 const inventory=BigInt(settings.inventory)-actual.weighted;if(inventory<0n)fail(503,'inventory_invariant','Inventory reconciliation requires review.');settings.inventory=String(inventory);await c.query('UPDATE settings SET data=$1 WHERE id=1',[settings]);
 await c.query("UPDATE reservations SET state='settled' WHERE id=$1",[requestId]);
 await ledger(c,r.user_id,'dollar',purchasedRefund,requestId+':settle');await ledger(c,r.user_id,'promo-dollar',promoRefund,requestId+':settle');await ledger(c,r.user_id,'raw-base',baseRefund,requestId+':settle');await ledger(c,r.user_id,'promo-token',promoTokenRefund,requestId+':settle');await ledger(c,null,'weighted-inventory',-actual.weighted,requestId+':settle');await ledger(c,null,'capacity',-refundTokens,requestId+':settle');
