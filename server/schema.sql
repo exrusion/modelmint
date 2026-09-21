@@ -33,6 +33,9 @@ CREATE INDEX IF NOT EXISTS requests_user_time ON requests(user_id,created_at);
 CREATE TABLE IF NOT EXISTS orders (id uuid PRIMARY KEY, user_id uuid REFERENCES users(id), chain_id int NOT NULL, wallet text NOT NULL, treasury text NOT NULL, pay_usd int NOT NULL, credit_micro bigint NOT NULL, base_tokens bigint NOT NULL, wei numeric(78,0) NOT NULL, quote_price text NOT NULL, state text NOT NULL DEFAULT 'pending', tx_hash text, created_at timestamptz NOT NULL DEFAULT now(), expires timestamptz NOT NULL, confirmed_at timestamptz, UNIQUE(chain_id,tx_hash));
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_provider text NOT NULL DEFAULT 'crypto';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS provider_ref text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_asset text NOT NULL DEFAULT 'native';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_address text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_decimals int;
 CREATE UNIQUE INDEX IF NOT EXISTS orders_provider_ref_unique ON orders(provider_ref) WHERE provider_ref IS NOT NULL;
 CREATE TABLE IF NOT EXISTS staking_positions (user_id uuid PRIMARY KEY REFERENCES users(id), wallet text UNIQUE NOT NULL CHECK(wallet=lower(wallet)), stated_wei numeric(78,0) NOT NULL CHECK(stated_wei>0), verified_balance_wei numeric(78,0) NOT NULL CHECK(verified_balance_wei>=0), activated_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), active boolean NOT NULL DEFAULT true, last_snapshot_block bigint, last_reward_at timestamptz);
 CREATE INDEX IF NOT EXISTS staking_positions_active ON staking_positions(active,activated_at) WHERE active=true;
@@ -48,6 +51,9 @@ CREATE TABLE IF NOT EXISTS product_updates (id uuid PRIMARY KEY, title text NOT 
 CREATE INDEX IF NOT EXISTS product_updates_public ON product_updates(published,position,created_at DESC);
 INSERT INTO product_updates(id,title,description,status,eta,link,position,published)
 VALUES('c2045126-4744-8576-a000-000000000001','Card payments are live','Pay securely through Stripe and receive 2× API credit automatically after confirmation. Every card purchase also contributes to the 10% staking purchase pool.','live','Live now','https://x.com/RoutersMarket/status/2102045126474485760?s=20',0,true)
+ON CONFLICT(id) DO UPDATE SET title=excluded.title,description=excluded.description,status=excluded.status,eta=excluded.eta,link=excluded.link,position=excluded.position,published=excluded.published,updated_at=now();
+INSERT INTO product_updates(id,title,description,status,eta,link,position,published)
+VALUES('c2045126-4744-8576-a000-000000000002','USDC payments are live','Pay with native USDC on Solana, Ethereum or Base where the network is configured. Wallet and direct-address payments receive the same 2× API credit and contribute to the 10% staking purchase pool.','live','Live now','/billing',0,true)
 ON CONFLICT(id) DO UPDATE SET title=excluded.title,description=excluded.description,status=excluded.status,eta=excluded.eta,link=excluded.link,position=excluded.position,published=excluded.published,updated_at=now();
 CREATE TABLE IF NOT EXISTS referrals (id uuid PRIMARY KEY, referrer_user_id uuid NOT NULL REFERENCES users(id), referred_user_id uuid UNIQUE NOT NULL REFERENCES users(id), referral_code text NOT NULL, reward_tokens bigint NOT NULL CHECK(reward_tokens>0), reward_micro bigint NOT NULL CHECK(reward_micro>0), created_at timestamptz NOT NULL DEFAULT now(), CHECK(referrer_user_id<>referred_user_id));
 CREATE INDEX IF NOT EXISTS referrals_referrer_time ON referrals(referrer_user_id,created_at DESC);
