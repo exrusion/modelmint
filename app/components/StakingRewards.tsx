@@ -36,7 +36,7 @@ export default function StakingRewards({standalone=false}:{standalone?:boolean})
   <div className="staking-heading"><div><span className="eyebrow">STAKE. SHARE. BUILD.</span><h2>Stake $ROUTERS.<br/>Share <mark>10% of purchases.</mark></h2></div><p>Every confirmed API-credit purchase creates a 10% reward pool. Active stakers receive API credit according to their verified share of the total stake.</p></div>
   <div className="staking-shell">
    <div className="staking-pulse">
-    <div className="staking-rings" aria-hidden="true"><i/><i/><i/><Image src="/routers-logo.webp" width={138} height={138} alt=""/></div>
+    <div className="staking-rings" aria-hidden="true"><i/><i/><i/><Image className="staking-lock-art" src="/staking-lock.webp" width={768} height={768} alt=""/></div>
     <div className="staking-pool-stat"><span>LIVE PURCHASE SHARE</span><strong>{config.rewardPercent}%</strong><small>distributed as API credit</small></div>
     <div className="staking-network"><span><i/> {config.enabled?'REWARDS ACTIVE':'REWARDS PAUSED'}</span><a href={`https://robinhoodchain.blockscout.com/token/${config.tokenAddress}`} target="_blank" rel="noreferrer">Contract ↗</a></div>
    </div>
