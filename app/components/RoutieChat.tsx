@@ -98,9 +98,9 @@ function answer(question:string,models:Model[]):Answer{
     text:'I’m Routie, the Routers guide. I can explain pricing, payments, keys, rewards, privacy and Routers Auto, or recommend from the live model catalogue.',
     actions:[{label:'See live models',href:'/models'}]
   };
-  if(/routers\/auto|routers auto|auto rout|automatic rout|fastest/.test(q))return {
-    text:'Use the model ID routers/auto. Routie filters the verified models your key can use, then ranks them with balanced, cheapest, fastest or best. The real selected model is returned in the response and X-Routers-Model header. Exact model IDs are never silently swapped.',
-    actions:[{label:'Explore Routers Auto',href:'/auto'},{label:'Read the docs',href:'/docs'}]
+  if(/routers\/(auto|fast|cheap|balanced|best|reasoning|code|vision)|routers auto|auto rout|automatic rout|fastest/.test(q))return {
+    text:'Use routers/auto, routers/fast, routers/cheap, routers/balanced, routers/best, routers/reasoning, routers/code or routers/vision. Every profile filters verified models available to your key and returns the real selected model in the response and X-Routers-Model header.',
+    actions:[{label:'Explore routing profiles',href:'/auto'},{label:'Read the docs',href:'/docs'}]
   };
   if(/gift|send.*credit|transfer.*credit/.test(q))return {
     text:'You can gift purchased API credit to an X handle, verified email or private claim link. Promotional credit cannot be transferred. Unclaimed gifts can be cancelled and expire after seven days.',
@@ -136,10 +136,10 @@ function answer(question:string,models:Model[]):Answer{
   };
   if(/model|coding|code|vision|image|reason|cheap|budget|premium|context|agent|tool|json|write|research/.test(q)){
     if(!live.length)return {text:'The live model catalogue is still loading. Open Models to see every model that is currently enabled and verified.',actions:[{label:'Open Models',href:'/models'}]};
-    if(/fastest/.test(q))return {text:'Model speed changes over time, so use routers/auto with the fastest strategy. It ranks compatible models using measured successful latency instead of a static claim.',actions:[{label:'Use Routers Auto',href:'/auto'}]};
+    if(/fastest/.test(q))return {text:'Model speed changes over time, so use routers/fast. It ranks compatible models using measured successful latency instead of a static claim.',actions:[{label:'Use routing profiles',href:'/auto'}]};
     const picks=pickModels(q,live);
     return {
-      text:`Based on the ${live.length} verified live models, these are the strongest matches for what you described. If you do not want to choose manually, use routers/auto with balanced.`,
+      text:`Based on the ${live.length} verified live models, these are the strongest matches for what you described. If you do not want to choose manually, use routers/balanced.`,
       picks,
       actions:[{label:'Compare all models',href:'/models'},{label:'Try in Playground',href:'/playground'}]
     };

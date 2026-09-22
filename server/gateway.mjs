@@ -1,7 +1,7 @@
 import {q,fail,hash,decrypt,id} from './db.mjs';
 import {rateLimit,concurrency,redis} from './redis.mjs';
 import {reserve,settle,ceilProduct,zeroUsage,promoEligible} from './accounting.mjs';
-import {AUTO_MODEL_ID,AUTO_STRATEGIES,parseAutoStrategy,rankAutoModels,supportsAutoRequest} from './auto-routing.mjs';
+import {AUTO_MODEL_ID,AUTO_STRATEGIES,ROUTING_PROFILES,ROUTING_PROFILE_IDS,parseAutoStrategy,rankAutoModels,routingProfile,supportsAutoRequest,supportsRoutingProfile} from './auto-routing.mjs';
 
 const RETRYABLE_UPSTREAM=new Set([401,403,404,408,425,429,500,502,503,504]);
 export function retryableProviderFailure(status){return status===null||RETRYABLE_UPSTREAM.has(Number(status));}
@@ -25,7 +25,7 @@ function availableToKey(key,model){return !key.allowed_models.length||key.allowe
 function hasPaidBalance(key){return BigInt(key.purchased_micro)>0n&&BigInt(key.base_tokens)>0n;}
 function hasPromoBalance(key){return Boolean(key.promo_expires&&new Date(key.promo_expires)>new Date()&&BigInt(key.promo_micro)>0n&&BigInt(key.promo_tokens)>0n);}
 
-async function autoCandidates(key,body,maximum,media,strategy){
+async function autoCandidates(key,body,maximum,media,strategy,profile){
  const rows=(await q(`SELECT m.*,COALESCE(s.samples,0)::int auto_samples,s.avg_latency auto_latency
   FROM models m LEFT JOIN (
    SELECT model_id,count(*) FILTER (WHERE status BETWEEN 200 AND 299) samples,round(avg(latency_ms) FILTER (WHERE status BETWEEN 200 AND 299)) avg_latency
@@ -34,7 +34,7 @@ async function autoCandidates(key,body,maximum,media,strategy){
   WHERE m.enabled AND m.verified AND m.auto_enabled`)).rows;
  const paid=hasPaidBalance(key),promo=hasPromoBalance(key),requirements={tools:Boolean(body.tools),vision:media,json:Boolean(body.response_format),maxOutput:maximum};
  return rankAutoModels(rows.filter(model=>{
-  if(!availableToKey(key,model)||(!paid&&!(promo&&promoEligible(model))))return false;
+  if(!availableToKey(key,model)||(!paid&&!(promo&&promoEligible(model)))||!supportsRoutingProfile(model,profile))return false;
   const input=conservativeInput(body,model,maximum,media);
   model.auto_input=input;
   model.auto_estimated_micro=Number(maximumCost(model,input,maximum));
@@ -55,9 +55,9 @@ async function providersFor(model){
  return (await q('SELECT * FROM providers WHERE enabled AND verified_at IS NOT NULL ORDER BY priority,id')).rows.filter(provider=>!model.provider_ids.length||model.provider_ids.includes(provider.id));
 }
 
-function exposeSelection(res,requestId,model,strategy,fallbacks=0){
+function exposeSelection(res,requestId,model,strategy,fallbacks=0,profile=null){
  res.setHeader('X-Request-Id',requestId);
- if(strategy){res.setHeader('X-Routers-Model',model.id);res.setHeader('X-Routers-Strategy',strategy);res.setHeader('X-Routers-Fallbacks',String(fallbacks));}
+ if(strategy){res.setHeader('X-Routers-Model',model.id);res.setHeader('X-Routers-Strategy',strategy);res.setHeader('X-Routers-Fallbacks',String(fallbacks));if(profile)res.setHeader('X-Routers-Profile',profile);}
 }
 
 export function mountGateway(app){
@@ -65,7 +65,7 @@ export function mountGateway(app){
   const key=await apiKey(req),promoActive=hasPromoBalance(key),paidBalance=hasPaidBalance(key);
   const models=(await q('SELECT id,name,promo,premium,auto_enabled FROM models WHERE enabled AND verified ORDER BY family,name')).rows.filter(model=>availableToKey(key,model));
   const data=models.map(model=>{const free=promoActive&&promoEligible(model);return {id:model.id,object:'model',created:0,owned_by:'routers',promo_eligible:free,paid_credit_required:!free&&!paidBalance};});
-  if(models.some(model=>model.auto_enabled&&(paidBalance||(promoActive&&promoEligible(model)))))data.unshift({id:AUTO_MODEL_ID,object:'model',created:0,owned_by:'routers',promo_eligible:promoActive,paid_credit_required:!promoActive&&!paidBalance,routing_strategies:AUTO_STRATEGIES});
+  if(models.some(model=>model.auto_enabled&&(paidBalance||(promoActive&&promoEligible(model)))))data.unshift(...ROUTING_PROFILE_IDS.map(profileId=>({id:profileId,object:'model',created:0,owned_by:'routers',promo_eligible:promoActive,paid_credit_required:!promoActive&&!paidBalance,...(profileId===AUTO_MODEL_ID?{routing_strategies:AUTO_STRATEGIES}:{routing_profile:ROUTING_PROFILES[profileId].label})})));
   res.json({object:'list',data});
  });
 
@@ -73,14 +73,15 @@ export function mountGateway(app){
   const key=await apiKey(req),body=req.body;
   if(typeof body.model!=='string'||!Array.isArray(body.messages)||!body.messages.length)fail(400,'invalid_request_error','model and messages are required.');
   if(body.n&&body.n!==1)fail(400,'unsupported_parameter','Only n=1 is supported.');
-  const automatic=body.model===AUTO_MODEL_ID,strategy=automatic?parseAutoStrategy(body.routing_strategy||req.headers['x-routers-strategy']):null;
+  const profile=routingProfile(body.model),automatic=Boolean(profile),strategy=automatic?parseAutoStrategy(body.model===AUTO_MODEL_ID?(body.routing_strategy||req.headers['x-routers-strategy']):profile.strategy):null;
+  if(automatic&&body.model!==AUTO_MODEL_ID&&(body.routing_strategy!==undefined||req.headers['x-routers-strategy']!==undefined))fail(400,'invalid_routing_strategy','Fixed routing profiles do not accept a routing_strategy override. Use routers/auto for custom strategies.');
   if(!automatic&&(body.routing_strategy!==undefined||req.headers['x-routers-strategy']!==undefined))fail(400,'invalid_routing_strategy','Routing strategies are available only with routers/auto.');
   const media=mediaRequest(body.messages),requestedMaximum=body.max_completion_tokens??body.max_tokens;
   let maximum=requestedMaximum===undefined?(automatic?1024:null):Number(requestedMaximum);
   if(automatic&&(!Number.isSafeInteger(maximum)||maximum<1))fail(400,'invalid_request_error','Invalid maximum output token count.');
   let candidates;
   if(automatic){
-   candidates=await autoCandidates(key,body,maximum,media,strategy);
+   candidates=await autoCandidates(key,body,maximum,media,strategy,profile);
    if(!candidates.length)fail(404,'auto_model_unavailable','No verified model compatible with this request, key and balance is currently available.');
   }else{
    const model=(await q('SELECT * FROM models WHERE (id=$1 OR $1=ANY(aliases)) AND enabled AND verified',[body.model])).rows[0];
@@ -128,7 +129,7 @@ export function mountGateway(app){
       }
       fail(503,'provider_unavailable','All configured providers rejected the request.');
      }
-     exposeSelection(res,requestId,model,strategy,index);
+     exposeSelection(res,requestId,model,strategy,index,automatic?body.model:null);
      if(!outgoing.stream){
       const data=await response.json();if(data.error)fail(502,'upstream_error','The provider could not complete this request.');usage=data.usage||null;
       await settle(attemptId,usage,{providerId,latency:Date.now()-attemptStart});reserved=false;

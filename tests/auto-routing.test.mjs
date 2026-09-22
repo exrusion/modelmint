@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseAutoStrategy,rankAutoModels,supportsAutoRequest} from '../server/auto-routing.mjs';
+import {parseAutoStrategy,rankAutoModels,routingProfile,supportsAutoRequest,supportsRoutingProfile} from '../server/auto-routing.mjs';
 
 const model=(id,overrides={})=>({id,enabled:true,verified:true,auto_enabled:true,tools:true,vision:true,json_format:true,max_output:4096,max_context:128000,auto_quality:50,auto_estimated_micro:10,auto_latency:500,auto_samples:10,...overrides});
 
@@ -23,4 +23,13 @@ test('cheapest, fastest and best use deterministic transparent rankings',()=>{
 test('fastest strategy does not treat insufficient history as a zero-latency result',()=>{
  const ranked=rankAutoModels([model('unknown',{auto_samples:2,auto_latency:10}),model('measured',{auto_samples:3,auto_latency:400})],{strategy:'fastest'});
  assert.equal(ranked[0].id,'measured');
+});
+
+test('routing profiles resolve to honest fixed strategies and capability filters',()=>{
+ assert.equal(routingProfile('routers/fast').strategy,'fastest');
+ assert.equal(routingProfile('routers/cheap').strategy,'cheapest');
+ assert.equal(supportsRoutingProfile({id:'qwen-coder',name:'Qwen Coder'},routingProfile('routers/code')),true);
+ assert.equal(supportsRoutingProfile({id:'plain-chat',name:'Plain Chat'},routingProfile('routers/code')),false);
+ assert.equal(supportsRoutingProfile({id:'vision-model',vision:true},routingProfile('routers/vision')),true);
+ assert.equal(supportsRoutingProfile({id:'text-model',vision:false},routingProfile('routers/vision')),false);
 });

@@ -1,5 +1,27 @@
 export const AUTO_MODEL_ID='routers/auto';
 export const AUTO_STRATEGIES=['balanced','cheapest','fastest','best'];
+export const ROUTING_PROFILES={
+ 'routers/auto':{strategy:'balanced',label:'Auto'},
+ 'routers/balanced':{strategy:'balanced',label:'Balanced'},
+ 'routers/cheap':{strategy:'cheapest',label:'Cheap'},
+ 'routers/fast':{strategy:'fastest',label:'Fast'},
+ 'routers/best':{strategy:'best',label:'Best'},
+ 'routers/reasoning':{strategy:'best',label:'Reasoning',kind:'reasoning'},
+ 'routers/code':{strategy:'best',label:'Code',kind:'code'},
+ 'routers/vision':{strategy:'best',label:'Vision',kind:'vision'}
+};
+export const ROUTING_PROFILE_IDS=Object.keys(ROUTING_PROFILES);
+
+export function routingProfile(value){return ROUTING_PROFILES[String(value||'')]||null;}
+
+export function supportsRoutingProfile(model,profile){
+ const kind=profile?.kind;if(!kind)return true;
+ if(kind==='vision')return Boolean(model.vision);
+ const identity=String(model.id||'')+' '+String(model.name||'')+' '+String(model.family||'');
+ if(kind==='code')return /code|coder|codestral|devstral|starcoder|deepseek|qwen/i.test(identity);
+ if(kind==='reasoning')return /reason|thinking|deepseek|\br1\b|\bo[134](?:\b|-)|qwq|gpt-5|gemini.*pro|claude.*(?:sonnet|opus)/i.test(identity);
+ return true;
+}
 
 const finite=value=>Number.isFinite(Number(value))?Number(value):0;
 const compareId=(a,b)=>String(a.id).localeCompare(String(b.id));
